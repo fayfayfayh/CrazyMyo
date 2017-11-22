@@ -196,15 +196,12 @@ def main():
         
             
             # plt.gca().cla() # optionally clear axes
-        print (accelData[0][:])
-        # plt.plot(np.arange(len(accelData)),accelData[:][0])
+        #print (len(accelData))
+        numAccelData = np.array(accelData)
+        plt.plot(np.arange(len(accelData)),numAccelData[:,0], 'r--', np.arange(len(accelData)),numAccelData[:,1], 'bs', np.arange(len(accelData)),numAccelData[:,2], 'g^')
         # plt.title('Accel Data')
-        # plt.draw()
-        # plt.pause(0.1)
-
-        # plt.show(block=True)
-
-
+        plt.draw()
+        plt.savefig('acceleration.png')
         hub.shutdown()
 
 
