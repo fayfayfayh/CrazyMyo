@@ -192,16 +192,22 @@ def main():
     finally:
         print("Shutting down hub...")
 
-
-        
-            
-            # plt.gca().cla() # optionally clear axes
-        #print (len(accelData))
         numAccelData = np.array(accelData)
-        plt.plot(np.arange(len(accelData)),numAccelData[:,0], 'r--', np.arange(len(accelData)),numAccelData[:,1], 'bs', np.arange(len(accelData)),numAccelData[:,2], 'g^')
+        fig, ax = plt.subplots()
+        
+        ax.plot(np.arange(0,(numAccelData.shape[0])*0.02, 0.02),numAccelData[:,0], 'r-', label='x acceleration')
+        ax.plot(np.arange(0,(numAccelData.shape[0])*0.02, 0.02),numAccelData[:,1], 'b-', label='y acceleration')
+        ax.plot(np.arange(0,(numAccelData.shape[0])*0.02, 0.02),numAccelData[:,2], 'g-', label='z acceleration')
+
+        legend = ax.legend()
+
+        plt.xlabel('Time [s]')
+        plt.ylabel('Acceleration in units of g (g = 9.8 m/s^2)')
+        plt.title('Myo Acceleration: logo on right side of right arm')
+
         # plt.title('Accel Data')
         plt.draw()
-        plt.savefig('acceleration.png')
+        plt.savefig('acceleration_logo_on_right.png')
         hub.shutdown()
 
 
