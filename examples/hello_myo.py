@@ -202,7 +202,7 @@ def main():
         legend = ax.legend()
 
         plt.xlabel('Time [s]')
-        plt.ylabel('Acceleration in units of g (g = 9.8 m/s^2)')
+        plt.ylabel('Acceleration in units of g (g = -9.8 m/s^2)')
         plt.title('Myo Acceleration: logo on right side of right arm')
 
         # plt.title('Accel Data')
