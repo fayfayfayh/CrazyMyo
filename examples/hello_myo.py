@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 from __future__ import print_function
+from scipy import integrate
 
 import myo as libmyo; libmyo.init()
 import time
@@ -193,21 +194,55 @@ def main():
         print("Shutting down hub...")
 
         numAccelData = np.array(accelData)
+        dataTimes = np.arange(0,(numAccelData.shape[0])*0.02, 0.02) #) timestamps array for accel
+        
+        # numSpeedData = numpy.empty_like(numAccelData)
+        #numSpeedData = numAccelData.copy()*(-9.8)
+
+        xnumSpeedData = integrate.cumtrapz((numAccelData[:,0]*(-9.8)).squeeze(),dataTimes)#x
+        ynumSpeedData = integrate.cumtrapz((numAccelData[:,1]*(-9.8)).squeeze(),dataTimes)#y
+        znumSpeedData = integrate.cumtrapz((numAccelData[:,2]*(-9.8)).squeeze(),dataTimes)#z
+
+        #numSpeedData 
+
+        speedDataTimes = np.arange(0,(xnumSpeedData.shape[0])*0.02, 0.02) # speed timestamps
+        
         fig, ax = plt.subplots()
         
-        ax.plot(np.arange(0,(numAccelData.shape[0])*0.02, 0.02),numAccelData[:,0], 'r-', label='x acceleration')
-        ax.plot(np.arange(0,(numAccelData.shape[0])*0.02, 0.02),numAccelData[:,1], 'b-', label='y acceleration')
-        ax.plot(np.arange(0,(numAccelData.shape[0])*0.02, 0.02),numAccelData[:,2], 'g-', label='z acceleration')
+        ax.plot(np.arange(0,(numAccelData.shape[0])*0.02, 0.02),numAccelData[:,0]*(-9.8), 'r-', label='x acceleration')
+        ax.plot(np.arange(0,(numAccelData.shape[0])*0.02, 0.02),numAccelData[:,1]*(-9.8), 'b-', label='y acceleration')
+        ax.plot(np.arange(0,(numAccelData.shape[0])*0.02, 0.02),numAccelData[:,2]*(-9.8), 'g-', label='z acceleration')
 
         legend = ax.legend()
 
         plt.xlabel('Time [s]')
-        plt.ylabel('Acceleration in units of g (g = -9.8 m/s^2)')
-        plt.title('Myo Acceleration: logo on right side of right arm')
+        plt.ylabel('Acceleration in [m/s^2])')
+        plt.title('Myo Acceleration: logo on top of arm')
 
         # plt.title('Accel Data')
         plt.draw()
-        plt.savefig('acceleration_logo_on_right.png')
+        plt.savefig('acceleration_const_speed_unnormed.png')
+
+        #Next plot velocity less initial velocity
+        plt.clf()
+
+        fig, ax = plt.subplots()
+        
+        ax.plot(speedDataTimes,xnumSpeedData, 'r-', label='x speed')
+        ax.plot(speedDataTimes,ynumSpeedData, 'b-', label='y speed')
+        ax.plot(speedDataTimes,znumSpeedData, 'g-', label='z speed')
+
+        legend = ax.legend()
+
+        plt.xlabel('Time [s]')
+        plt.ylabel('Speed [m/s]')
+        plt.title('Difference from initial speed')
+
+        # plt.title('Accel Data')
+        plt.draw()
+        plt.savefig('speed_const_speed_test.png')
+
+
         hub.shutdown()
 
 
