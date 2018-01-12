@@ -97,7 +97,16 @@ class Listener(libmyo.DeviceListener):
             self.emg_enabled = False
             self.emg = None
         self.pose = pose
+        #self.pose =
+        #if the pose is fingers spread, then turn on flag for fingers fingers_spread
+        #if pose is fist turn on flag for
+        #cancel a pose and hover with double_tap
+        #if pose is
+        #If pose is rest then hover
+        
+
         self.output()
+
 
     def on_orientation_data(self, myo, timestamp, orientation):
         self.orientation = orientation
@@ -105,9 +114,9 @@ class Listener(libmyo.DeviceListener):
 
     def on_accelerometor_data(self, myo, timestamp, acceleration):
         self.acceleration = acceleration
-        accelData.append([acceleration[0],acceleration[1], acceleration[2]]) 
+        accelData.append([acceleration[0],acceleration[1], acceleration[2]])
 
-        
+
 
     def on_gyroscope_data(self, myo, timestamp, gyroscope):
         self.gyroscope = gyroscope
@@ -195,7 +204,7 @@ def main():
 
         numAccelData = np.array(accelData)
         dataTimes = np.arange(0,(numAccelData.shape[0])*0.02, 0.02) #) timestamps array for accel
-        
+
         # numSpeedData = numpy.empty_like(numAccelData)
         #numSpeedData = numAccelData.copy()*(-9.8)
 
@@ -203,12 +212,12 @@ def main():
         ynumSpeedData = integrate.cumtrapz((numAccelData[:,1]*(-9.8)).squeeze(),dataTimes)#y
         znumSpeedData = integrate.cumtrapz((numAccelData[:,2]*(-9.8)).squeeze(),dataTimes)#z
 
-        #numSpeedData 
+        #numSpeedData
 
         speedDataTimes = np.arange(0,(xnumSpeedData.shape[0])*0.02, 0.02) # speed timestamps
-        
+
         fig, ax = plt.subplots()
-        
+
         ax.plot(np.arange(0,(numAccelData.shape[0])*0.02, 0.02),numAccelData[:,0]*(-9.8), 'r-', label='x acceleration')
         ax.plot(np.arange(0,(numAccelData.shape[0])*0.02, 0.02),numAccelData[:,1]*(-9.8), 'b-', label='y acceleration')
         ax.plot(np.arange(0,(numAccelData.shape[0])*0.02, 0.02),numAccelData[:,2]*(-9.8), 'g-', label='z acceleration')
@@ -227,7 +236,7 @@ def main():
         plt.clf()
 
         fig, ax = plt.subplots()
-        
+
         ax.plot(speedDataTimes,xnumSpeedData, 'r-', label='x speed')
         ax.plot(speedDataTimes,ynumSpeedData, 'b-', label='y speed')
         ax.plot(speedDataTimes,znumSpeedData, 'g-', label='z speed')
@@ -248,4 +257,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
