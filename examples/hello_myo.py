@@ -34,6 +34,7 @@ inCalibration = False;
 restingRoll = 0;  #resting orientation
 restingPitch = 0;  #resting orientation
 restingYaw = 0;  #resting orientation
+minRot = 0.35 # must rotate arm at least this much for gesture detection
 
 
 
@@ -261,6 +262,9 @@ class Listener(libmyo.DeviceListener):
         if pose == libmyo.Pose.double_tap:
             myo.set_stream_emg(libmyo.StreamEmg.enabled)
             self.emg_enabled = True
+            if self.pose != libmyo.Pose.double_tap:
+                print("Hover requested\n") #HOVER
+
         elif pose == libmyo.Pose.fingers_spread:
             myo.set_stream_emg(libmyo.StreamEmg.disabled)
             self.emg_enabled = False
@@ -279,6 +283,28 @@ class Listener(libmyo.DeviceListener):
 
     def on_orientation_data(self, myo, timestamp, orientation):
         self.orientation = orientation
+        curPose = self.pose
+        lastQuat = orientation #last orientation in quarternion
+        roll = math.atan2(2.0*(lastQuat[3]*lastQuat[0] + lastQuat[1]*lastQuat[2]), 1.0 - 2.0*(lastQuat[0]*lastQuat[0] + lastQuat[1] * lastQuat[1]))
+        pitch = math.asin(max(-1.0, min(1.0, 2.0*(lastQuat[3]*lastQuat[1] - lastQuat[2]*lastQuat[0]))))
+        yaw = math.atan2(2.0*(lastQuat[3]*lastQuat[2] + lastQuat[0]*lastQuat[1]), 1.0 - 2.0*( lastQuat[1]*lastQuat[1] + lastQuat[2]*lastQuat[2]))
+
+        deltaRoll = roll - restingRoll
+        deltaPitch = pitch - restingPitch
+        deltaYaw = yaw - restingYaw
+
+        if abs(deltaPitch) >= minRot:
+            if curPose == libmyo.Pose.fingers_spread:
+                print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
+            elif curPose == libmyo.Pose.fist:
+                print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
+
+        if abs(deltaRoll) >= minRot:
+            if curPose == libmyo.Pose.fist:
+                print("ROLL! - Roll angle: " + str(math.degrees(deltaRoll))+"\n")
+
+
+
         #self.output()
 
     def on_accelerometor_data(self, myo, timestamp, acceleration):
@@ -380,7 +406,7 @@ def main():
 
 
     calibrate(hub)
-    #hub.run(1000, Listener())
+    hub.run(1000, Listener())
 
     # Listen to keyboard interrupts and stop the hub in that case.
     #Let us calibrate
