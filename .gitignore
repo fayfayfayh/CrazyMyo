@@ -1,7 +1,7 @@
-.pyc
-.pdf
-.jpg
-.jpeg
+*.pyc
+*.pdf
+*.jpg
+*.jpeg
 .png
 examples/acceleration_logo_on_bottom.png
 examples/acceleration_logo_on_left.png
