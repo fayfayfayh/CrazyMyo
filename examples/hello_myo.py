@@ -30,11 +30,13 @@ import matplotlib.pyplot as plt
 import math
 
 accelData = []
-inCalibration = False;
-restingRoll = 0;  #resting orientation
-restingPitch = 0;  #resting orientation
-restingYaw = 0;  #resting orientation
+inCalibration = False
+restingRoll = 0  #resting orientation
+restingPitch = 0  #resting orientation
+restingYaw = 0  #resting orientation
 minRot = 0.35 # must rotate arm at least this much for gesture detection
+inPose = False #flag to see if a pose is currently active
+
 
 
 
@@ -199,8 +201,6 @@ class Calibration_Listener(libmyo.DeviceListener):
         """
 
 
-
-
 class Listener(libmyo.DeviceListener):
     """
     Listener implementation. Return False from any function to
@@ -220,6 +220,7 @@ class Listener(libmyo.DeviceListener):
         self.rssi = None
         self.emg = None
         self.last_time = 0
+
 
     def output(self):
         ctime = time.time()
@@ -259,10 +260,14 @@ class Listener(libmyo.DeviceListener):
         self.output()
 
     def on_pose(self, myo, timestamp, pose):
+        if pose == libmyo.Pose.rest:
+            inPose = False
+
         if pose == libmyo.Pose.double_tap:
             myo.set_stream_emg(libmyo.StreamEmg.enabled)
             self.emg_enabled = True
             if self.pose != libmyo.Pose.double_tap:
+                inPose = False
                 print("Hover requested\n") #HOVER
 
         elif pose == libmyo.Pose.fingers_spread:
@@ -280,7 +285,7 @@ class Listener(libmyo.DeviceListener):
 
         self.output()
 
-
+        #Needs support for left/right
     def on_orientation_data(self, myo, timestamp, orientation):
         self.orientation = orientation
         curPose = self.pose
@@ -293,19 +298,29 @@ class Listener(libmyo.DeviceListener):
         deltaPitch = pitch - restingPitch
         deltaYaw = yaw - restingYaw
 
-        if abs(deltaPitch) >= minRot:
+        if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw) and abs(deltaPitch) > abs(deltaRoll):
             if curPose == libmyo.Pose.fingers_spread:
+                inPose = True
                 print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
             elif curPose == libmyo.Pose.fist:
+                inPose = True
                 print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
-        if abs(deltaRoll) >= minRot:
+        if abs(deltaRoll) >= minRot and abs(deltaRoll) > abs(deltaYaw) and abs(deltaRoll) > abs(deltaPitch):
             if curPose == libmyo.Pose.fist:
+                inPose = True
                 print("ROLL! - Roll angle: " + str(math.degrees(deltaRoll))+"\n")
 
+        if abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch) and abs(deltaYaw) > abs(deltaRoll):
+            if curPose == libmyo.Pose.fist:
+                inPose = True
+                print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
+                print("left/right - Yaw angle: " + str(math.degrees(yaw))+"\n")
 
 
-        #self.output()
+
+                #hover else
+
 
     def on_accelerometor_data(self, myo, timestamp, acceleration):
         self.acceleration = acceleration
@@ -376,6 +391,7 @@ class Listener(libmyo.DeviceListener):
         Called when the warmup completed.
         """
 
+#Get resting position orientation
 def calibrate (hub):
     print("Hold out the arm with the Myo on it straight with your palms facing parallel to the ground\n")
     print ("Hold this position and double tap\n")
@@ -401,16 +417,10 @@ def main():
 
     hub.set_locking_policy(libmyo.LockingPolicy.none)
 
-    #hub.run_once(5000,Listener())
-
-
-
-    calibrate(hub)
+    calibrate(hub) #perform calibration to get resting position orientation
     hub.run(1000, Listener())
 
     # Listen to keyboard interrupts and stop the hub in that case.
-    #Let us calibrate
-    #print("Please h")
     try:
         while hub.running:
             time.sleep(0.25)
