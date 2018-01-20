@@ -98,6 +98,9 @@ class Calibration_Listener(libmyo.DeviceListener):
         self.output()
 
     def on_pose(self, myo, timestamp, pose):
+        global restingYaw
+        global restingRoll
+        global restingPitch
         if pose == libmyo.Pose.double_tap:
             myo.set_stream_emg(libmyo.StreamEmg.enabled)
             self.emg_enabled = True
@@ -260,6 +263,7 @@ class Listener(libmyo.DeviceListener):
         self.output()
 
     def on_pose(self, myo, timestamp, pose):
+        global inPose
         if pose == libmyo.Pose.rest:
             inPose = False
 
@@ -287,6 +291,10 @@ class Listener(libmyo.DeviceListener):
 
         #Needs support for left/right
     def on_orientation_data(self, myo, timestamp, orientation):
+        global restingYaw
+        global restingRoll
+        global restingPitch
+        global inPose
         self.orientation = orientation
         curPose = self.pose
         lastQuat = orientation #last orientation in quarternion
@@ -298,7 +306,7 @@ class Listener(libmyo.DeviceListener):
         deltaPitch = pitch - restingPitch
         deltaYaw = yaw - restingYaw
 
-        if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw) and abs(deltaPitch) > abs(deltaRoll):
+        if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw) and abs(deltaPitch) > abs(deltaRoll) and inPose == False:
             if curPose == libmyo.Pose.fingers_spread:
                 inPose = True
                 print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
@@ -306,16 +314,16 @@ class Listener(libmyo.DeviceListener):
                 inPose = True
                 print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
-        if abs(deltaRoll) >= minRot and abs(deltaRoll) > abs(deltaYaw) and abs(deltaRoll) > abs(deltaPitch):
+        if abs(deltaRoll) >= minRot and abs(deltaRoll) > abs(deltaYaw) and abs(deltaRoll) > abs(deltaPitch) and inPose == False:
             if curPose == libmyo.Pose.fist:
                 inPose = True
                 print("ROLL! - Roll angle: " + str(math.degrees(deltaRoll))+"\n")
 
-        if abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch) and abs(deltaYaw) > abs(deltaRoll):
+        if abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch) and abs(deltaYaw) > abs(deltaRoll) and inPose == False:
             if curPose == libmyo.Pose.fist:
                 inPose = True
                 print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
-                print("left/right - Yaw angle: " + str(math.degrees(yaw))+"\n")
+                #print("left/right - Yaw angle: " + str(math.degrees(yaw))+"\n")
 
 
 
