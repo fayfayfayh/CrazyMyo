@@ -437,7 +437,7 @@ def main():
     finally:
         print("Shutting down hub...")
         hub.shutdown()
-
+        #plotting stuff of old
         # numAccelData = np.array(accelData)
         # dataTimes = np.arange(0,(numAccelData.shape[0])*0.02, 0.02) #) timestamps array for accel
         #
