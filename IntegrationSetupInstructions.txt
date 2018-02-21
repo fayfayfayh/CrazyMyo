@@ -1,0 +1,9 @@
+1. Ensure you have Python2.7 installed and get this repo on your computer
+2. Few external libraries required
+      -numpy
+      -pygame
+      -matplotlib
+3. Install USB driver 
+      - follow instructions on this link
+4. Current working keyboard controlled version with attitude interpretation
+      - ./examples/KeyboardCTRLwAttitude.py
