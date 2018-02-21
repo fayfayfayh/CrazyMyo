@@ -71,7 +71,7 @@ class flightCtrl:
 
 
     def updateCoef(self):
-        
+
         self.theta = (self.yawCurr - self.yawInit)*(3.1415926/180)
 
         """
@@ -113,15 +113,15 @@ class flightCtrl:
 
     def key_ctrl(self, scf):
         mc = MotionCommander(scf)
-        mc._reset_position_estimator() 
+        mc._reset_position_estimator()
 
         print 'Spacebar to start'
         raw_input()
         pygame.display.set_mode((400, 300))
 
-        print 'WASD for throttle & yaw; arrow keys for left/right/forward/backward' 
+        print 'WASD for throttle & yaw; arrow keys for left/right/forward/backward'
         print 'Spacebar to land'
-    
+
         vel_x = 0
         vel_y = 0
         vel_z = 0
@@ -134,9 +134,9 @@ class flightCtrl:
             with open('SensorMaster.txt','r') as stbFile:
                 stbLines = stbFile.readlines()
 
-            while len(stbLines) == 0: 
+            while len(stbLines) == 0:
                 with open('SensorMaster.txt','r') as stbFile:
-                    stbLines = stbFile.readlines()           
+                    stbLines = stbFile.readlines()
 
             currAttitude = stbLines[len(stbLines)-1]
             need, to, currentYaw, test = currAttitude.split(',')
@@ -145,7 +145,7 @@ class flightCtrl:
             Thread(target = self._updateYaw, args = (scf,)).start()
 
             while True:
-                
+
                 for event in pygame.event.get():
 
                     if event.type == pygame.KEYDOWN:
@@ -153,9 +153,9 @@ class flightCtrl:
                         if event.key == pygame.K_w:
                             vel_z = 0.3
 
-                        if event.key == pygame.K_SPACE:  
+                        if event.key == pygame.K_SPACE:
                             print 'Space pressed, landing'
-                            
+
                             mc.land()
                             time.sleep(2)
                             print 'Closing link...'
@@ -190,7 +190,7 @@ class flightCtrl:
                             print(self.yawCurr)
 
                         if event.key == pygame.K_LEFT:
-                            #vel_y = 0.3 
+                            #vel_y = 0.3
                             vel_x = 0.3 * self.lfCoef[0]
                             vel_y = 0.3 * self.lfCoef[1]
                             print('move left: vel_x = %.2f, vel_y = %.2f' %(vel_x* self.bkCoef[0], vel_y* self.bkCoef[1]))
@@ -210,7 +210,7 @@ class flightCtrl:
                             with open('SensorMaster.txt','r') as stbFile:
                                 stbLines = stbFile.readlines()
 
-                            while len(stbLines) == 0: 
+                            while len(stbLines) == 0:
                                 with open('SensorMaster.txt','r') as stbFile:
                                     stbLines = stbFile.readlines()
 
@@ -220,14 +220,14 @@ class flightCtrl:
                             need, to, initYaw, test = newInitAttitude.split(',')
                             print(initYaw)
                             self.yawInit = float(initYaw)
-                        
+
 
                         if event.key == pygame.K_RCTRL:
                             mc.stop()
-                        
+
 
                     if event.type == pygame.KEYUP:
-                        
+
                         if event.key == pygame.K_w or event.key == pygame.K_s :
                             vel_z = 0
 
@@ -235,7 +235,7 @@ class flightCtrl:
                             yaw_rate = 0
 
                         if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
-                            vel_x = 0  
+                            vel_x = 0
 
                         if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
                             vel_y = 0
@@ -252,7 +252,7 @@ class flightCtrl:
 
 
 class displayStb (object):
-    
+
     tsInit = 0
 
     def __init__(self,ax1,ax2,ax3):
@@ -319,12 +319,12 @@ if __name__ == '__main__':
         myfile.write
 
         cflib.crtp.init_drivers(enable_debug_driver=False)
- 
+
         scf = SyncCrazyflie(URI)
 
 
         startMotion = flightCtrl(scf)
-
+        """
         print('I will graph at one point')
         fig = plt.figure()
         axRoll = fig.add_subplot(3,1,1)
@@ -333,7 +333,7 @@ if __name__ == '__main__':
         animate = displayStb(axRoll,axYaw,axPitch)
         ani = animation.FuncAnimation(fig, animate.update, interval=20)
         plt.show()
-
+        """
 
     except KeyboardInterrupt:
         print('\nCtrl-C detected, shutting down...')
@@ -345,10 +345,8 @@ if __name__ == '__main__':
     except Exception, e:
         print(str(e))
         print('\nShutting down...')
-                
+
         pygame.quit()
         plt.close("all")
         scf.close_link()
-        sys.exit(0) 
-    
-                
+        sys.exit(0)
