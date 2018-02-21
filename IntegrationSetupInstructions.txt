@@ -1,9 +1,35 @@
 1. Ensure you have Python2.7 installed and get this repo on your computer
+
 2. Few external libraries required
       -numpy
       -pygame
       -matplotlib
+
 3. Install USB driver 
       - follow instructions on this link: https://wiki.bitcraze.io/doc:crazyradio:install_windows_zadig
+
 4. Current working keyboard controlled version with attitude interpretation
       - ./examples/KeyboardCTRLwAttitude.py
+
+5. Choose a platform and download the MYO SDK (try Windows): https://developer.thalmic.com/start/
+	-If on Windows, unpack/unzip the files and note the folder containing SDK files. You'll need it
+
+6. Get Niklas Rosenstein's MYO python wrapper here: http://myo-python.readthedocs.io/en/latest/#installation
+
+7. In order to run the program, add the following lines/paths to the PATH environment variable on Windows
+	- The Path of the Python Installation i.e., C:\Python27\
+	-The path to Python scripts i.e., C:\Python27\Scripts
+	-The path to the myo-sdk include folder i.e., C:\Users\kelvin\myo-sdk-win-0.9.0\myo-sdk-win-0.9.0\include
+	-Path to the myo sdk lib i.e., C:\Users\kelvin\myo-sdk-win-0.9.0\myo-sdk-win-0.9.0\lib
+	-Path to myo sdk bin C:\Users\kelvin\myo-sdk-win-0.9.0\myo-sdk-win-0.9.0\bin
+	-Path(s) to myo sdk lib files C:\Users\kelvin\myo-sdk-win-0.9.0\myo-sdk-win-0.9.0\lib\myoXX.lib, where XX is 64 or 32 for the respective system architecture. Add both to be safe
+	- Here is how to change the PATH variable on windows: https://www.java.com/en/download/help/path.xml
+
+8. If running cygwin (recommended to use crazyflie on windows I think) please add the following line to the ~/.bashrc file in your cygwin home directory
+	# Cygwin
+	export PATH=$PATH:$(cygpath C:\\myo-sdk-win-0.8.1\\bin)
+
+9. Grab the Myo Connect Program here: https://www.myo.com/start
+	- install and set this up with the actual Myo armband
+
+
