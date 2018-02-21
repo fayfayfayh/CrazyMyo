@@ -32,4 +32,8 @@
 9. Grab the Myo Connect Program here: https://www.myo.com/start
 	- install and set this up with the actual Myo armband
 
+10. run
+	pip install -r requirements.txt
+    in repo
+
 
