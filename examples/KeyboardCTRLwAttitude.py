@@ -33,6 +33,8 @@ tested with (and designed for) the flow deck.
 Change the URI variable to your Crazyflie configuration.
 """
 import sys
+sys.path.append('../')#get include directories outside current folder for our new filesystem
+
 import logging
 import time
 import pygame
