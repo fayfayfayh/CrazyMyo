@@ -141,7 +141,7 @@ class Calibration_Listener(libmyo.DeviceListener):
 
     def on_accelerometor_data(self, myo, timestamp, acceleration):
         self.acceleration = acceleration
-        accelData.append([acceleration[0],acceleration[1], acceleration[2]])
+        #accelData.append([acceleration[0],acceleration[1], acceleration[2]])
 
 
 
@@ -367,7 +367,7 @@ class Listener(libmyo.DeviceListener):
 
     def on_accelerometor_data(self, myo, timestamp, acceleration):
         self.acceleration = acceleration
-        accelData.append([acceleration[0],acceleration[1], acceleration[2]])
+        #accelData.append([acceleration[0],acceleration[1], acceleration[2]])
 
     def on_gyroscope_data(self, myo, timestamp, gyroscope):
         self.gyroscope = gyroscope
