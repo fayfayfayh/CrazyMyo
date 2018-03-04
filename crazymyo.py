@@ -182,11 +182,13 @@ class Calibration_Listener(libmyo.DeviceListener):
         """
         Called when a Myo armband is unpaired.
         """
+        #land gracefully
 
     def on_disconnect(self, myo, timestamp):
         """
         Called when a Myo is disconnected.
         """
+        #land gracefully
 
     def on_arm_sync(self, myo, timestamp, arm, x_direction, rotation,
                     warmup_state):
@@ -535,6 +537,9 @@ class Myo:
                 time.sleep(0.25)
         except KeyboardInterrupt:
             print("\nQuitting ...")
+            #perhaps try landing here too
+        #except :
+
         finally:
             print("Shutting down hub...")
             hub.shutdown()
@@ -560,6 +565,7 @@ def main():
 
     except KeyboardInterrupt:
         print('\nClosing link...')
+        #perhaps land gracefully here
         scf.close_link()
 
         print('Shutting down...')
