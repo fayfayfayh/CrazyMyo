@@ -23,9 +23,42 @@ import myo as libmyo; libmyo.init()
 import numpy as np
 import math
 
-#poses from pilot perspective
+"""
+Gestures SUPPORTED
+1) If not flying, double tap once to start flying
+2) If flying, double tap once to hover
+3) If Flying, double tap twice to land
+4) If flying, a rest pose should trigger hover
+5) Yaw + fist = translate left/RIGHT
+6) yaw + fingers spread = YAW
+7) roll + fist = roll? Do a flip if the angle is over some to be determined later amount
+8) pitch + fist = translate forward or backward depending on the quads orientation
+9) pitch + fingers spread = adjust Altitude
+
+Gestures are sent in the following format:
+    (myo_pose, rotation_type, rotation_angle)
+myo_pose is one of:
+    1) libmyo.Pose.double_tap
+    2) libmyo.Pose.fingers_spread
+    3) libmyo.Pose.rest
+    4) libmyo.Pose.fist
+    5) LAND (to accomadate landing)
+rotation_type is one of
+    1) roll
+    2) pitch
+    3) yaw
+rotation_angle is an angle in radians
+For double taps and rests, the last two variables can safely be ignored.
+
+"""
+
+roll = 1
+pitch = 2
+yaw = 3
+
+#poses from pilot perspective #remove this code...
 DOUBLE_TAP = 1
-LAND = 2 #triggered by two consecutive double tap poses
+LAND = 95 #triggered by two consecutive double tap poses
 UP = 3 #negative pitch angle
 DOWN = 4 #positive pitch angle
 LEFT = 5 #positive angle
@@ -277,17 +310,17 @@ class Listener(libmyo.DeviceListener):
         global inPose
         if pose == libmyo.Pose.rest:
             inPose = False
-            gesture.queue.put((REST,0), block=False)
+            gesture.queue.put((pose,0,0), block=False)
 
         if pose == libmyo.Pose.double_tap: #double tap detected
             myo.set_stream_emg(libmyo.StreamEmg.enabled)
             self.emg_enabled = True
             if self.pose != libmyo.Pose.double_tap:
                 inPose = False
-                gesture.queue.put((DOUBLE_TAP,0), block=False)
+                gesture.queue.put((pose,0,0), block=False)
             else: #this means we want to land if we get two double taps in a row
                 inPose = False
-                gesture.queue.put((LAND,0), block=False)
+                gesture.queue.put((LAND,0,0), block=False)
 
 
         elif pose == libmyo.Pose.fingers_spread:
@@ -318,20 +351,12 @@ class Listener(libmyo.DeviceListener):
         if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw) and abs(deltaPitch) > abs(deltaRoll) and inPose == False:
             if curPose == libmyo.Pose.fingers_spread: #UP DOWN
                 inPose = True
-
-                if deltaPitch > 0:
-                    gesture.queue.put((DOWN,deltaPitch), block=False)
-                else:
-                    gesture.queue.put((UP, deltaPitch), block=False)
+                gesture.queue.put((curPose,pitch,deltaPitch), block=False)
 
                 print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
             elif curPose == libmyo.Pose.fist: #forward/backward
                 inPose = True
-
-                if deltaPitch > 0:
-                    gesture.queue.put((FORWARD, deltaPitch), block=False)
-                else:
-                    gesture.queue.put((BACKWARD, deltaPitch), block=False)
+                gesture.queue.put((curPose,pitch, deltaPitch), block=False)
 
                 print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
@@ -339,10 +364,8 @@ class Listener(libmyo.DeviceListener):
             if curPose == libmyo.Pose.fist:
                 inPose = True
 
-                if deltaRoll > 0:
-                    gesture.queue.put((TILT_RIGHT, deltaRoll), block=False)
-                else:
-                    gesture.queue.put((TILT_LEFT, deltaRoll), block=False)
+                gesture.queue.put((curPose,roll, deltaRoll), block=False)
+
 
                 print("ROLL! - Roll angle: " + str(math.degrees(deltaRoll))+"\n")
 
@@ -350,20 +373,15 @@ class Listener(libmyo.DeviceListener):
             if curPose == libmyo.Pose.fist:#left right motion
                 inPose = True
 
-                if deltaYaw > 0:
-                    gesture.queue.put((LEFT,deltaYaw), block=False)
-                else:
-                    gesture.queue.put((RIGHT, deltaYaw), block=False)
+                gesture.queue.put((curPose,yaw,deltaYaw), block=False)
+
 
                 print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
             elif curPose == libmyo.Pose.fingers_spread: #yaw drone
                 inPose = True
 
-                if deltaYaw > 0:
-                    gesture.queue.put((YAW_LEFT, deltaYaw), block=False)
-                else:
-                    gesture.queue.put((YAW_RIGHT, deltaYaw), block=False)
+                gesture.queue.put((curPose,yaw, deltaYaw), block=False)
 
                 print("YAW DRONE left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
