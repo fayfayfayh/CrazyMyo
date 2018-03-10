@@ -102,7 +102,6 @@ class SyncCrazyflie:
         Thread(target = self._getStabilizer).start()
         #Thread(target = self._getAccelerometer).start()
         #Thread(target = self._getGyroscope).start()
-        Thread(target = self._getHeight). start()
 
     def _connection_failed(self, link_uri, msg):
         """Callback when connection initial connection fails (i.e no Crazyflie
@@ -119,23 +118,18 @@ class SyncCrazyflie:
     """all definition after this point is for status monitor"""
 
     def _stab_log_error(self, logconf, msg):
-        """Callback from the log API when an error occurs""" 
+        """Callback from the log API when an error occurs"""
         print('Error when logging %s: %s' % (logconf.name, msg))
 
     def _stab_log_data(self, timestamp, data, logconf):
         """Callback froma the log API when data arrives"""
         """print('[%d][%s]: %s' % (timestamp, logconf.name, data))"""
-        with open('StabilizerData.txt', 'a') as stabilizerData:
-            stabilizerData.write('[%d][%s]: %s' % (timestamp, logconf.name, data))
-            stabilizerData.write('\n')
+        #with open('StabilizerData.txt', 'a') as stabilizerData:
+            #stabilizerData.write('[%d][%s]: %s' % (timestamp, logconf.name, data))
+            #stabilizerData.write('\n')
         with open('SensorMaster.txt', 'a') as sensorMaster:
             sensorMaster.write('%d,%.2f,%.2f,%.2f' %(timestamp, data['stabilizer.roll'], data['stabilizer.yaw'], data['stabilizer.pitch']))
             sensorMaster.write('\n')
-
-    def _height_log_data(self, timestamp, data, logconf):
-        with open('HeightData.txt', 'a') as heightLog:
-            heightLog.write('%d,%.2f' %(timestamp, data['posEstimatorAlt.estimatedZ']))
-            heightLog.write('\n')
 
     def _log_gyro_data(self, timestamp, data, logconf):
         with open('GyroscopeData.txt', 'a') as GyroscopeData:
@@ -146,7 +140,7 @@ class SyncCrazyflie:
             AccelerometerData.write('[%d][%s]: %s \n' % (timestamp, logconf.name, data))
 
     def _getStabilizer(self):
-        # The definition of the logconfig can be made before connecting
+         # The definition of the logconfig can be made before connecting
         self._lg_stab = LogConfig(name='Stabilizer', period_in_ms=10)
         self._lg_stab.add_variable('stabilizer.roll', 'float')
         self._lg_stab.add_variable('stabilizer.pitch', 'float')
@@ -168,26 +162,6 @@ class SyncCrazyflie:
         except AttributeError:
             print('Could not add Stabilizer log config, bad configuration.')
 
-
-    def _getHeight(self):
-        self._lg_height = LogConfig(name='posEstimatorAlt', period_in_ms=10)
-        self._lg_height.add_variable('posEstimatorAlt.estimatedZ', 'float')
-        # Adding the configuration cannot be done until a Crazyflie is
-        # connected, since we need to check that the variables we
-        # would like to log are in the TOC.
-        try:
-            self.cf.log.add_config(self._lg_height)
-            # This callback will receive the data
-            self._lg_height.data_received_cb.add_callback(self._height_log_data)
-            # Start the logging
-            self._lg_height.start()
-        except KeyError as e:
-            print('Could not start log configuration,'
-                  '{} not found in TOC'.format(str(e)))
-        except AttributeError:
-            print('Could not add Stabilizer log config, bad configuration.')
-
-
     def _getAccelerometer(self):
         self._log_conf = LogConfig(name="Accel", period_in_ms=10)
         self._log_conf.add_variable('acc.x', 'float')
@@ -200,7 +174,7 @@ class SyncCrazyflie:
                 self._log_conf.data_received_cb.add_callback(self._log_accel_data)
                 self._log_conf.start()
             else:
-                print("acc.x/y/z not found in log TOC") 
+                print("acc.x/y/z not found in log TOC")
         except KeyError as e:
             print('Could not start log configuration,'
                   '{} not found in TOC'.format(str(e)))
@@ -212,14 +186,14 @@ class SyncCrazyflie:
         self._gyro_conf.add_variable('gyro.x', 'float')
         self._gyro_conf.add_variable('gyro.y', 'float')
         self._gyro_conf.add_variable('gyro.z', 'float')
-    
+
         try:
             self._gyro = self.cf.log.add_config(self._gyro_conf)
             if self._gyro_conf is not None:
                 self._gyro_conf.data_received_cb.add_callback(self._log_gyro_data)
                 self._gyro_conf.start()
             else:
-                print("gyro.x/y/z not found in log TOC") 
+                print("gyro.x/y/z not found in log TOC")
         except KeyError as e:
             print('Could not start log configuration,'
                   '{} not found in TOC'.format(str(e)))
