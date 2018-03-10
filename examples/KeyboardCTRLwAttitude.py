@@ -25,6 +25,8 @@
 #  MA  02110-1301, USA.
 
 import sys
+sys.path.append('../')#get include directories outside current folder for our new filesystem
+
 import logging
 import time
 import pygame
