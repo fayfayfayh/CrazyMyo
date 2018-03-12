@@ -204,6 +204,7 @@ class Calibration_Listener(libmyo.DeviceListener):
         """
 
 
+
 class Listener(libmyo.DeviceListener):
     """
     Listener implementation. Return False from any function to
@@ -238,6 +239,8 @@ class Listener(libmyo.DeviceListener):
 
 
 
+
+
         # if self.acceleration:
         #     for comp in self.acceleration:
         #         parts.append(str(comp).ljust(15))
@@ -267,29 +270,27 @@ class Listener(libmyo.DeviceListener):
         if pose == libmyo.Pose.rest:
             inPose = False
 
-        if pose == libmyo.Pose.double_tap:
+
+        if pose == libmyo.Pose.double_tap: #double tap detected
             myo.set_stream_emg(libmyo.StreamEmg.enabled)
             self.emg_enabled = True
             if self.pose != libmyo.Pose.double_tap:
                 inPose = False
-                print("Hover requested\n") #HOVER
+            else: #this means we want to land if we get two double taps in a row
+                inPose = False
+                print("LAND requested - two double taps in a row")
+
+
 
         elif pose == libmyo.Pose.fingers_spread:
             myo.set_stream_emg(libmyo.StreamEmg.disabled)
             self.emg_enabled = False
             self.emg = None
         self.pose = pose
-        #self.pose =
-        #if the pose is fingers spread, then turn on flag for fingers fingers_spread
-        #if pose is fist turn on flag for
-        #cancel a pose and hover with double_tap
-        #if pose is
-        #If pose is rest then hover
-
 
         self.output()
 
-        #Needs support for left/right
+
     def on_orientation_data(self, myo, timestamp, orientation):
         global restingYaw
         global restingRoll
@@ -307,34 +308,46 @@ class Listener(libmyo.DeviceListener):
         deltaYaw = yaw - restingYaw
 
         if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw) and abs(deltaPitch) > abs(deltaRoll) and inPose == False:
-            if curPose == libmyo.Pose.fingers_spread:
+            if curPose == libmyo.Pose.fingers_spread: #UP DOWN
                 inPose = True
+
+
                 print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
-            elif curPose == libmyo.Pose.fist:
+            elif curPose == libmyo.Pose.fist: #forward/backward
                 inPose = True
+
+
                 print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
         if abs(deltaRoll) >= minRot and abs(deltaRoll) > abs(deltaYaw) and abs(deltaRoll) > abs(deltaPitch) and inPose == False:
             if curPose == libmyo.Pose.fist:
                 inPose = True
+
+
+
+
                 print("ROLL! - Roll angle: " + str(math.degrees(deltaRoll))+"\n")
 
         if abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch) and abs(deltaYaw) > abs(deltaRoll) and inPose == False:
-            if curPose == libmyo.Pose.fist:
+            if curPose == libmyo.Pose.fist:#left right motion
                 inPose = True
+
+
+
+
                 print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
-                #print("left/right - Yaw angle: " + str(math.degrees(yaw))+"\n")
+
+            elif curPose == libmyo.Pose.fingers_spread: #yaw drone
+                inPose = True
 
 
 
-                #hover else
+                print("YAW DRONE left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
 
     def on_accelerometor_data(self, myo, timestamp, acceleration):
         self.acceleration = acceleration
-        accelData.append([acceleration[0],acceleration[1], acceleration[2]])
-
-
+        #accelData.append([acceleration[0],acceleration[1], acceleration[2]])
 
     def on_gyroscope_data(self, myo, timestamp, gyroscope):
         self.gyroscope = gyroscope
@@ -398,6 +411,7 @@ class Listener(libmyo.DeviceListener):
         """
         Called when the warmup completed.
         """
+
 
 #Get resting position orientation
 def calibrate (hub):
