@@ -19,14 +19,14 @@
 # THE SOFTWARE.
 
 from __future__ import print_function
-from scipy import integrate
+#from scipy import integrate
 
 import myo as libmyo; libmyo.init()
 import time
 import sys
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
+#import matplotlib
+#import matplotlib.pyplot as plt
 import math
 
 accelData = []

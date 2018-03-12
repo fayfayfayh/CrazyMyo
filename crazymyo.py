@@ -10,6 +10,7 @@ from threading import Timer
 import cflib.crtp
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.positioning.motion_commander import MotionCommander
+#from cflib.crazyflie.commander import Commander
 
 from gestures import Gesture
 gesture = Gesture() #holds the gestures Queue
@@ -42,7 +43,7 @@ myo_pose is one of:
     2) libmyo.Pose.fingers_spread
     3) libmyo.Pose.rest
     4) libmyo.Pose.fist
-    5) LAND (to accomadate landing)
+    5) LAND (to accommodate landing)
 rotation_type is one of
     1) roll
     2) pitch
@@ -57,7 +58,7 @@ pitch = 2
 yaw = 3
 
 #poses from pilot perspective #remove this code...
-DOUBLE_TAP = 1
+DOUBLE_TAP = libmyo.Pose.double_tap
 LAND = 95 #triggered by two consecutive double tap poses
 UP = 3 #negative pitch angle
 DOWN = 4 #positive pitch angle
@@ -140,6 +141,9 @@ class Calibration_Listener(libmyo.DeviceListener):
         global restingYaw
         global restingRoll
         global restingPitch
+        # print("Pose is: ")
+        # print(pose)
+
         if pose == libmyo.Pose.double_tap:
             myo.set_stream_emg(libmyo.StreamEmg.enabled)
             self.emg_enabled = True
@@ -308,19 +312,28 @@ class Listener(libmyo.DeviceListener):
 
     def on_pose(self, myo, timestamp, pose):
         global inPose
+        global gesture
+
+        # print("on_pose: Pose is: ")
+        # print (pose)
+        # print("\n\n")
         if pose == libmyo.Pose.rest:
             inPose = False
-            gesture.queue.put((pose,0,0), block=False)
+            gesture.add_gesture((pose,0,0))
 
         if pose == libmyo.Pose.double_tap: #double tap detected
+
             myo.set_stream_emg(libmyo.StreamEmg.enabled)
             self.emg_enabled = True
             if self.pose != libmyo.Pose.double_tap:
+                print("Double tap detected")
                 inPose = False
-                gesture.queue.put((pose,0,0), block=False)
+                
+                gesture.add_gesture((pose,0,0))
+                
             else: #this means we want to land if we get two double taps in a row
                 inPose = False
-                gesture.queue.put((LAND,0,0), block=False)
+                gesture.add_gesture((LAND,0,0))
 
 
         elif pose == libmyo.Pose.fingers_spread:
@@ -337,6 +350,7 @@ class Listener(libmyo.DeviceListener):
         global restingRoll
         global restingPitch
         global inPose
+        global gesture
         self.orientation = orientation
         curPose = self.pose
         lastQuat = orientation #last orientation in quarternion
@@ -351,12 +365,12 @@ class Listener(libmyo.DeviceListener):
         if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw) and abs(deltaPitch) > abs(deltaRoll) and inPose == False:
             if curPose == libmyo.Pose.fingers_spread: #UP DOWN
                 inPose = True
-                gesture.queue.put((curPose,pitch,deltaPitch), block=False)
+                gesture.add_gesture((curPose,pitch,deltaPitch))
 
                 print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
             elif curPose == libmyo.Pose.fist: #forward/backward
                 inPose = True
-                gesture.queue.put((curPose,pitch, deltaPitch), block=False)
+                gesture.add_gesture((curPose,pitch, deltaPitch))
 
                 print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
@@ -364,7 +378,7 @@ class Listener(libmyo.DeviceListener):
             if curPose == libmyo.Pose.fist:
                 inPose = True
 
-                gesture.queue.put((curPose,roll, deltaRoll), block=False)
+                gesture.add_gesture((curPose,roll, deltaRoll))
 
 
                 print("ROLL! - Roll angle: " + str(math.degrees(deltaRoll))+"\n")
@@ -373,7 +387,7 @@ class Listener(libmyo.DeviceListener):
             if curPose == libmyo.Pose.fist:#left right motion
                 inPose = True
 
-                gesture.queue.put((curPose,yaw,deltaYaw), block=False)
+                gesture.add_gesture((curPose,yaw,deltaYaw))
 
 
                 print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
@@ -381,7 +395,7 @@ class Listener(libmyo.DeviceListener):
             elif curPose == libmyo.Pose.fingers_spread: #yaw drone
                 inPose = True
 
-                gesture.queue.put((curPose,yaw, deltaYaw), block=False)
+                gesture.add_gesture((curPose,yaw, deltaYaw))
 
                 print("YAW DRONE left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
@@ -480,35 +494,56 @@ class FlightCtrl:
 
     def __init__(self, scf):
 
-        global gesture
+        #global gesture
+        #self.cf = scf.cf
+        #self.cmdr = Commander(self.cf)
         scf.open_link()
-
+    
 
     def perform_gesture(self, g_id, mc):
 
+        d = 0.3
+
+        print("\nID")
+        print(g_id[0])
+        print("\n")
+
         if g_id[0] == DOUBLE_TAP:
-            if mc._is_flying: #should probs add nested if here to make sure it hovers if it is flying
+            print("Double tap detected")
+            if mc._is_flying: 
+                mc.stop()
                 pass
             else:
                 mc.take_off()
+                #print("We'd take off here")
         # Add new gestures here
-        else:
-            pass
 
+        elif g_id[1] == roll:
+            print("roll")
+            mc.move_distance(0,math.copysign(d, g_id[2]),0)
+        
+        elif g_id[1] == pitch:
+            print ('pitch')
+            mc.move_distance(math.copysign(d, g_id[2]),0,0)
+
+        elif g_id[1] == yaw:   
+            print ('yaw') 
+            if g_id[2] < 0:
+                mc.turn_left(g_id[2])
+            else:
+                mc.turn_right(g_id[2])
+
+        elif g_id[1] == 'LAND':
+            mc.land()
+        else:
+            if mc._is_flying:
+                mc.stop()
+            print("Unknown gesture")
 
     def gesture_ctrl(self, scf, fc, g):
+        global gesture
         mc = MotionCommander(scf)
         mc._reset_position_estimator()
-
-        print ('Enter to start (c to cancel)')
-        char = raw_input()
-
-        if char == 'c':
-            print('\nClosing link...')
-            scf.close_link()
-
-            print('Shutting down...')
-            os.kill(os.getpid(), signal.SIGINT)
 
         try:
 
@@ -516,9 +551,11 @@ class FlightCtrl:
 
                 g_id = gesture.get_gesture()
 
-                if gesture is not None:
+                if g_id is not None:
+                    print("Gesture detected: ")
+                    print(g_id)
                     fc.perform_gesture(g_id, mc)
-
+                
         except Exception, e:
             print (str(e))
             scf.close_link()
@@ -527,16 +564,11 @@ class FlightCtrl:
 class Myo:
 
     def __init__(self):
-        global gesture
+        #global gesture
+        pass
 
     def gesture_detection(self, g):
-        # Add gesture detection stuff here
-        # Put it into the queue similar to below, a corresponding update to perform_gesture in
-        # FlightCtrl would be needed for full integration
-        #g=1
-        #gesture.queue.put(g, block=False)
-
-
+        
         print("Connecting to Myo ... Use CTRL^C to exit.")
         try:
             hub = libmyo.Hub()
