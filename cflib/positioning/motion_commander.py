@@ -56,7 +56,7 @@ class MotionCommander:
     VELOCITY = 0.2
     RATE = 360.0 / 5
 
-    def __init__(self, crazyflie, default_height=0.3):
+    def __init__(self, crazyflie, default_height=0.3, max_height=1.5, min_height=0.3):
         """
         Construct an instance of a MotionCommander
 
@@ -69,6 +69,8 @@ class MotionCommander:
             self._cf = crazyflie
 
         self.default_height = default_height
+        self.max_height = max_height
+        self.min_height = min_height
 
         self._is_flying = False
         self._thread = None
@@ -87,7 +89,7 @@ class MotionCommander:
         :return:
         """
         if self._is_flying:
-            raise Exception('Already flying')
+            print('Already flying')
 
         if not self._cf.is_connected():
             raise Exception('Crazyflie is not connected')
@@ -404,7 +406,8 @@ class MotionCommander:
 
     def _set_vel_setpoint(self, velocity_x, velocity_y, velocity_z, rate_yaw):
         if not self._is_flying:
-            raise Exception('Can not move on the ground. Take off first!')
+            print('Cannot move on the ground. Take off first!')
+            return
         self._thread.set_vel_setpoint(
             velocity_x, velocity_y, velocity_z, rate_yaw)
 
