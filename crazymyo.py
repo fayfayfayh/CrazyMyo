@@ -104,7 +104,7 @@ class Calibration_Listener(libmyo.DeviceListener):
         self.last_time = 0
 
     def output(self):
-        # TODO: Should clean up these comments 
+        # TODO: Should clean up these comments
         ctime = time.time()
         if (ctime - self.last_time) < self.interval:
             return
@@ -327,9 +327,9 @@ class Listener(libmyo.DeviceListener):
             if self.pose != libmyo.Pose.double_tap:
                 print("Double tap detected")
                 inPose = False
-                
+
                 gesture.add_gesture((pose,0,0))
-                
+
             else: #this means we want to land if we get two double taps in a row
                 inPose = False
                 gesture.add_gesture((LAND,0,0))
@@ -479,6 +479,8 @@ def calibrate (hub):
     except KeyboardInterrupt:
         print("\nQuitting ...")
     finally:
+        myo.vibrate ('long')
+        myo.vibrate ('short')
         print("Thank you for calibrating")
 
 
@@ -494,7 +496,7 @@ class FlightCtrl:
     def __init__(self, scf):
 
         scf.open_link()
-    
+
 
     def perform_gesture(self, g_id, mc):
 
@@ -511,7 +513,7 @@ class FlightCtrl:
             print(g_id[0])
 
         if g_id[0] == DOUBLE_TAP:
-            if mc._is_flying: 
+            if mc._is_flying:
                 print("Hovering...")
                 mc.stop()
             else:
@@ -525,10 +527,10 @@ class FlightCtrl:
         elif g_id[0] == FIST and g_id[1] == pitch_id:
             print("Pitch...")
             mc.move_distance(math.copysign(d, g_id[2]), 0, 0)
-        
+
         elif g_id[0] == FINGERS_SPREAD and g_id[1] == pitch_id:
-            
-            if g_id[2] < 0: 
+
+            if g_id[2] < 0:
                 #if mc._thread.get_height() + d < mc.max_height:
                 print ("Up...")
                 mc.up(d)
@@ -542,8 +544,8 @@ class FlightCtrl:
                 #else:
                 #    print("Min. height" + mc.min_height + "m reached: requested height: " + (mc._thread.get_height() - d))
 
-        elif g_id[0] == FINGERS_SPREAD and g_id[1] == yaw_id:   
-            print ('Yaw...') 
+        elif g_id[0] == FINGERS_SPREAD and g_id[1] == yaw_id:
+            print ('Yaw...')
             if g_id[2] < 0:
                 mc.turn_left(30)
             else:
@@ -571,7 +573,7 @@ class FlightCtrl:
                     #print("Gesture detected: ")
                     #print(g_id)
                     fc.perform_gesture(g_id, mc)
-                
+
         except Exception, e:
             print (str(e))
             scf.close_link()
@@ -583,7 +585,7 @@ class Myo:
         pass
 
     def gesture_detection(self, g):
-        
+
         print("Connecting to Myo ... Use CTRL^C to exit.")
         try:
             hub = libmyo.Hub()
