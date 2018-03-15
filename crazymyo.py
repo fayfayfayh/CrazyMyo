@@ -323,10 +323,20 @@ class Listener(libmyo.DeviceListener):
             myo.set_stream_emg(libmyo.StreamEmg.enabled)
             self.emg_enabled = True
             if consecDoubleTaps < 2:
-                print("Double tap detected")
+                print("Double tap detected: Recalibration!\n")
                 inPose = False
 
+                lastQuat = self.orientation #last orientation in quarternion
+                restingRoll = math.atan2(2.0*(lastQuat[3]*lastQuat[0] + lastQuat[1]*lastQuat[2]), 1.0 - 2.0*(lastQuat[0]*lastQuat[0] + lastQuat[1] * lastQuat[1]))
+                restingPitch = math.asin(max(-1.0, min(1.0, 2.0*(lastQuat[3]*lastQuat[1] - lastQuat[2]*lastQuat[0]))))
+                restingYaw = math.atan2(2.0*(lastQuat[3]*lastQuat[2] + lastQuat[0]*lastQuat[1]), 1.0 - 2.0*( lastQuat[1]*lastQuat[1] + lastQuat[2]*lastQuat[2]))
+                print("Detected default orientation [" + str(restingRoll) + "," + str(restingPitch) + "," + str(restingYaw) +"]\n")
+                #self.output()
+                myo.vibrate ('long')
+                myo.vibrate ('short')
                 gesture.add_gesture((DOUBLE_TAP,0,0))
+
+
 
             else: #this means we want to land if we get two double taps in a row
                 inPose = False
@@ -519,7 +529,7 @@ class FlightCtrl:
         if g_id[0] == DOUBLE_TAP:
             if mc._is_flying:
                 print("Hovering...")
-                mc.stop()
+                #mc.stop()
             else:
                 consecDoubleTaps = 0
                 print("Taking off...")
