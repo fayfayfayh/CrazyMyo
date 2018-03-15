@@ -535,7 +535,7 @@ class FlightCtrl:
 
         elif g_id[0] == FINGERS_SPREAD and g_id[1] == pitch_id:
 
-            if g_id[2] < 0:
+            if g_id[2] > 0:
                 #if mc._thread.get_height() + d < mc.max_height:
                 print ("Up...")
                 mc.up(d)
@@ -559,6 +559,8 @@ class FlightCtrl:
         elif g_id[0] == LAND:
             print("Landing...")
             mc.land()
+
+
         else: #rest behaviour
             if mc._is_flying:
                 mc.stop()
