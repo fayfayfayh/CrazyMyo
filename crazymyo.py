@@ -38,10 +38,10 @@ Gestures SUPPORTED
 Gestures are sent in the following format:
     (myo_pose, rotation_type, rotation_angle)
 myo_pose is one of:
-    1) libmyo.Pose.double_tap
-    2) libmyo.Pose.fingers_spread
-    3) libmyo.Pose.rest
-    4) libmyo.Pose.fist
+    1) DOUBLE_TAP
+    2) FINGERS_SPREAD
+    3) REST
+    4) FIST
     5) LAND (to accommodate landing)
 rotation_type is one of
     1) roll
@@ -51,14 +51,17 @@ rotation_angle is an angle in radians
 For double taps and rests, the last two variables can safely be ignored.
 
 """
-
+#rotation_type constants
 roll_id = 1
 pitch_id = 2
 yaw_id = 3
 
-DOUBLE_TAP = libmyo.Pose.double_tap
-FIST = libmyo.Pose.fist
-FINGERS_SPREAD = libmyo.Pose.fingers_spread
+#myo_pose constants
+DOUBLE_TAP = 1
+FIST = 2
+FINGERS_SPREAD = 3
+REST = 4
+LAND = 95 #triggered by two consecutive double tap poses
 
 #myo globals
 restingRoll = 0  #resting orientation
@@ -66,21 +69,13 @@ restingPitch = 0  #resting orientation
 restingYaw = 0  #resting orientation
 minRot = 0.35 # must rotate arm at least this many RADIANS for gesture detection
 inPose = False #flag to see if a pose is currently active
+consecDoubleTaps = 0 #for landing
+
 
 # These need to be reworked
 
-LAND = 95 #triggered by two consecutive double tap poses
-UP = 3 #negative pitch angle
-DOWN = 4 #positive pitch angle
-LEFT = 5 #positive angle
-RIGHT = 6 #negative angle
-FORWARD = 7 #downward motion = positive pitch angle
-BACKWARD = 8 #upward motion = negative pitch angle
-TILT_RIGHT = 9 #CW ROTATION POS ANGLES
-TILT_LEFT = 10 #CCW ROTATION  NEG ANGLES
-YAW_RIGHT = 11 #negative angle
-YAW_LEFT = 12 #positive angle
-REST = 13 #hover like with double tap
+
+
 
 #Myo event listener- specialized for calibration type behaviour
 class Calibration_Listener(libmyo.DeviceListener):
@@ -156,6 +151,8 @@ class Calibration_Listener(libmyo.DeviceListener):
             restingYaw = math.atan2(2.0*(lastQuat[3]*lastQuat[2] + lastQuat[0]*lastQuat[1]), 1.0 - 2.0*( lastQuat[1]*lastQuat[1] + lastQuat[2]*lastQuat[2]))
             print("Detected default orientation [" + str(restingRoll) + "," + str(restingPitch) + "," + str(restingYaw) +"]\n")
             self.output()
+            myo.vibrate ('long')
+            myo.vibrate ('short')
             return False
 
         elif pose == libmyo.Pose.fingers_spread:
@@ -315,24 +312,26 @@ class Listener(libmyo.DeviceListener):
     def on_pose(self, myo, timestamp, pose):
         global inPose
         global gesture
+        global consecDoubleTaps
 
         if pose == libmyo.Pose.rest:
             inPose = False
-            gesture.add_gesture((pose,0,0))
+            gesture.add_gesture((REST,0,0))
 
         if pose == libmyo.Pose.double_tap: #double tap detected
-
+            consecDoubleTaps = consecDoubleTaps + 1
             myo.set_stream_emg(libmyo.StreamEmg.enabled)
             self.emg_enabled = True
-            if self.pose != libmyo.Pose.double_tap:
+            if consecDoubleTaps < 2:
                 print("Double tap detected")
                 inPose = False
 
-                gesture.add_gesture((pose,0,0))
+                gesture.add_gesture((DOUBLE_TAP,0,0))
 
             else: #this means we want to land if we get two double taps in a row
                 inPose = False
                 gesture.add_gesture((LAND,0,0))
+                consecDoubleTaps = 0
 
 
         elif pose == libmyo.Pose.fingers_spread:
@@ -350,6 +349,7 @@ class Listener(libmyo.DeviceListener):
         global restingPitch
         global inPose
         global gesture
+        global consecDoubleTaps
         self.orientation = orientation
         curPose = self.pose
         lastQuat = orientation #last orientation in quarternion
@@ -363,18 +363,21 @@ class Listener(libmyo.DeviceListener):
 
         if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw) and abs(deltaPitch) > abs(deltaRoll) and inPose == False:
             if curPose == libmyo.Pose.fingers_spread: #UP DOWN
+                consecDoubleTaps = 0
                 inPose = True
-                gesture.add_gesture((curPose,pitch_id,deltaPitch))
+                gesture.add_gesture((FINGERS_SPREAD,pitch_id,deltaPitch))
 
                 print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
             elif curPose == libmyo.Pose.fist: #forward/backward
+                consecDoubleTaps = 0
                 inPose = True
-                gesture.add_gesture((curPose,pitch_id, deltaPitch))
+                gesture.add_gesture((FIST,pitch_id, deltaPitch))
 
                 print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
         if abs(deltaRoll) >= minRot and abs(deltaRoll) > abs(deltaYaw) and abs(deltaRoll) > abs(deltaPitch) and inPose == False:
             if curPose == libmyo.Pose.fist:
+                consecDoubleTaps = 0
                 inPose = True
 
                 #gesture.add_gesture((curPose,roll_id, deltaRoll))
@@ -384,17 +387,19 @@ class Listener(libmyo.DeviceListener):
 
         if abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch) and abs(deltaYaw) > abs(deltaRoll) and inPose == False:
             if curPose == libmyo.Pose.fist:#left right motion
+                consecDoubleTaps = 0
                 inPose = True
 
-                gesture.add_gesture((curPose,yaw_id,deltaYaw))
+                gesture.add_gesture((FIST,yaw_id,deltaYaw))
 
 
                 print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
             elif curPose == libmyo.Pose.fingers_spread: #yaw drone
+                consecDoubleTaps = 0
                 inPose = True
 
-                gesture.add_gesture((curPose,yaw_id, deltaYaw))
+                gesture.add_gesture((FINGERS_SPREAD,yaw_id, deltaYaw))
 
                 print("YAW DRONE left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
@@ -479,8 +484,6 @@ def calibrate (hub):
     except KeyboardInterrupt:
         print("\nQuitting ...")
     finally:
-        myo.vibrate ('long')
-        myo.vibrate ('short')
         print("Thank you for calibrating")
 
 
@@ -499,6 +502,7 @@ class FlightCtrl:
 
 
     def perform_gesture(self, g_id, mc):
+        global consecDoubleTaps
 
         d = 0.3
 
@@ -517,6 +521,7 @@ class FlightCtrl:
                 print("Hovering...")
                 mc.stop()
             else:
+                consecDoubleTaps = 0
                 print("Taking off...")
                 mc.take_off()
 
@@ -551,10 +556,10 @@ class FlightCtrl:
             else:
                 mc.turn_right(30)
 
-        elif g_id[1] == LAND:
+        elif g_id[0] == LAND:
             print("Landing...")
             mc.land()
-        else:
+        else: #rest behaviour
             if mc._is_flying:
                 mc.stop()
 
