@@ -5,7 +5,6 @@ import logging
 import time
 
 from threading import Thread
-from threading import Timer
 
 import cflib.crtp
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
@@ -22,6 +21,7 @@ import signal
 import myo as libmyo; libmyo.init()
 import numpy as np
 import math
+from math import sin, cos
 
 """
 Gestures SUPPORTED
@@ -155,6 +155,9 @@ class Calibration_Listener(libmyo.DeviceListener):
             restingPitch = math.asin(max(-1.0, min(1.0, 2.0*(lastQuat[3]*lastQuat[1] - lastQuat[2]*lastQuat[0]))))
             restingYaw = math.atan2(2.0*(lastQuat[3]*lastQuat[2] + lastQuat[0]*lastQuat[1]), 1.0 - 2.0*( lastQuat[1]*lastQuat[1] + lastQuat[2]*lastQuat[2]))
             print("Detected default orientation [" + str(restingRoll) + "," + str(restingPitch) + "," + str(restingYaw) +"]\n")
+            myo.vibrate ('long')
+            myo.vibrate ('short')
+
             self.output()
             return False
 
@@ -476,8 +479,7 @@ def calibrate (hub):
     except KeyboardInterrupt:
         print("\nQuitting ...")
     finally:
-        myo.vibrate ('long')
-        myo.vibrate ('short')
+
         print("Thank you for calibrating")
 
 
@@ -490,23 +492,23 @@ logging.basicConfig(level=logging.ERROR)
 
 class FlightCtrl:
 
-    def __init__(self, scf):
+    #initialize variables for attitude tracking
+    yawInit = 0
+    yawCurr = 0
+    theta = 0
+    rtCoef = [0,-1]
+    lfCoef = [0,1]
+    fwCoef = [1,0]
+    bkCoef = [-1,0]
+    lvSpeed = 0.3
 
+    #initialize fixed movement distance
+    d = 0.3
+
+    def __init__(self, scf):
         scf.open_link()
 
-
-    def perform_gesture(self, g_id, mc):
-        #initialize variables for attitude tracking
-        yawInit = 0
-        yawCurr = 0
-        theta = 0
-        rtCoef = [0,-1]
-        lfCoef = [0,1]
-        fwCoef = [1,0]
-        bkCoef = [-1,0]
-        levelSpeed = 0.3
-
-        #initialize fixed movement distance
+    def perform_gesture(self, scf, g_id, mc):
         d = 0.3
 
         if g_id[1] == roll_id:
@@ -526,27 +528,33 @@ class FlightCtrl:
             else:
                 print("Taking off...")
                 mc.take_off()
+                threadUpdate = Thread(target = self._updateYaw, args = (scf,))
+                threadUpdate.start()
             self.resetYawInit()
 
         elif g_id[0] == FIST and g_id[1] == yaw_id:
             print("Roll...")
             #mc.move_distance(0,math.copysign(d, g_id[2]),0)
-            if (g_id[2] > 0)
+            if (g_id[2] > 0):
                 #turn right
-                mc.move_distance(self.d * self.rtCoef[0], self.d * self.rtCoef[1], 0)
-            else
+                print("turning right")
+                mc.move_distance(self.lvSpeed * self.rtCoef[0], self.lvSpeed * self.rtCoef[1], 0)
+            else:
                 #turn left
-                mc.move_distance(self.d * self.lfCoef[0], self.d * self.lfCoef[1], 0)
+                print("turning left")
+                mc.move_distance(self.lvSpeed * self.lfCoef[0], self.lvSpeed * self.lfCoef[1], 0)
 
         elif g_id[0] == FIST and g_id[1] == pitch_id:
             print("Pitch...")
             #mc.move_distance(math.copysign(d, g_id[2]), 0, 0)
-            if (g_id[2] < 0)
+            if (g_id[2] < 0):
                 #move forward
-                mc.move_distance(self.d * self.fwCoef[0], self.d * self.fwCoef[1], 0)
-            else
+                print("moving forward")
+                mc.move_distance(self.lvSpeed * self.fwCoef[0], self.lvSpeed * self.fwCoef[1], 0)
+            else:
                 #move backward
-                mc.move_distance(self.d * self.bkCoef[0], self.d * self.bkCoef[1], 0)
+                print("moving backward")
+                mc.move_distance(self.lvSpeed * self.bkCoef[0], self.lvSpeed * self.bkCoef[1], 0)
 
         elif g_id[0] == FINGERS_SPREAD and g_id[1] == pitch_id:
 
@@ -579,41 +587,50 @@ class FlightCtrl:
 
     """Functions to update attitude by reading storage text file"""
     def updateCoef(self):
-
-        self.theta = (self.yawCurr - self.yawInit)*(3.1415926/180)
-        #print('current angle:')
-        #print(self.theta)
-        #print('\n')
-        self.rtCoef = [-sin(self.theta), -cos(self.theta)]
-        self.lfCoef = [sin(self.theta), cos(self.theta)]
-        self.fwCoef = [cos(self.theta), -sin(self.theta)]
-        self.bkCoef = [-cos(self.theta), sin(self.theta)]
+        try:
+            self.theta = (self.yawCurr - self.yawInit)*(3.1415926/180)
+            self.rtCoef = [-sin(self.theta), -cos(self.theta)]
+            self.lfCoef = [sin(self.theta), cos(self.theta)]
+            self.fwCoef = [cos(self.theta), -sin(self.theta)]
+            self.bkCoef = [-cos(self.theta), sin(self.theta)]
+        except Exception,e:
+            print("Update failed")
 
     def updateYawCurr(self):
-        with open('SensorMaster.txt','r') as stbFile:
-            stbLines = stbFile.readlines()
-
-        currAttitude = stbLines[len(stbLines)-1]
-        dumb1, dumb2, currentYaw, dumb3 = currAttitude.split(',')
-        self.yawCurr = float(currentYaw)
-        #update all coefficients after updating the yaw angle
-        coef = self.updateCoef()
-
-    def resetYawInit(self):
-         #set recalibrate initial Yaw value
-        with open('SensorMaster.txt','r') as stbFile:
-            stbLines = stbFile.readlines()
-
-        while len(stbLines) == 0:
+        try:
             with open('SensorMaster.txt','r') as stbFile:
                 stbLines = stbFile.readlines()
 
-        print("yaw angle recalibrated :")
-        newInitAttitude = stbLines[len(stbLines)-1]
+            currAttitude = stbLines[len(stbLines)-1]
+            dumb1, dumb2, currentYaw, dumb3 = currAttitude.split(',')
+            self.yawCurr = float(currentYaw)
+            print("current attitude: ")
+            print(self.yawCurr)
+            #update all coefficients after updating the yaw angle
+            coef = self.updateCoef()
+        except Exception, e:
+            #print str(e)
+            print("Update current yaw failed")
 
-        dumb1, dumb2, initYaw, dumb3 = newInitAttitude.split(',')
-        print(initYaw)
-        self.yawInit = float(initYaw)
+    def resetYawInit(self):
+        try:
+             #set recalibrate initial Yaw value
+            with open('SensorMaster.txt','r') as stbFile:
+                stbLines = stbFile.readlines()
+
+            while len(stbLines) == 0:
+                with open('SensorMaster.txt','r') as stbFile:
+                    stbLines = stbFile.readlines()
+
+            print("yaw angle recalibrated :")
+            newInitAttitude = stbLines[len(stbLines)-1]
+
+            dumb1, dumb2, initYaw, dumb3 = newInitAttitude.split(',')
+            print(initYaw)
+            self.yawInit = float(initYaw)
+        except Exception, e:
+            #print str(e)
+            print("reset failed")
 
     def _updateYaw(self, scf):
         try:
@@ -622,7 +639,8 @@ class FlightCtrl:
                 time.sleep(0.1)
 
         except Exception, e:
-            print str(e)
+            #print str(e)
+            print("Update failed, Landing")
             scf.close_link()
 
     def gesture_ctrl(self, scf, fc, g):
@@ -631,8 +649,6 @@ class FlightCtrl:
         mc._reset_position_estimator()
 
         self.resetYawInit()
-        threadUpdate = Thread(tartget = self._updateYaw, argu = (scf,))
-        threadUpdate.start()
 
         try:
 
@@ -643,7 +659,7 @@ class FlightCtrl:
                 if g_id is not None:
                     #print("Gesture detected: ")
                     #print(g_id)
-                    fc.perform_gesture(g_id, mc)
+                    fc.perform_gesture(scf, g_id, mc)
 
         except Exception, e:
             print (str(e))
@@ -686,6 +702,10 @@ class Myo:
 def main():
 
     try:
+        #logfile reset
+        myfile = open('SensorMaster.txt', 'w')
+        myfile.write
+        myfile.close()
 
         cflib.crtp.init_drivers(enable_debug_driver=False)
 
@@ -715,8 +735,6 @@ def main():
 
         scf.close_link()
         sys.exit(0)
-
-
 
 
 if __name__ == '__main__':
