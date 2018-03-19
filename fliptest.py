@@ -10,13 +10,35 @@ import cflib.crtp
 import os
 import signal
 
+from math import pi
+
+import struct
+
+from cflib.crtp.crtpstack import CRTPPacket
+from cflib.crtp.crtpstack import CRTPPort
+
 URI = 'radio://0/80/2M'
 
 import cflib
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.log import LogConfig
+from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
+
+from cflib.positioning.motion_commander import MotionCommander
 
 logging.basicConfig(level=logging.ERROR)
+
+# Crazyflie params
+M = 0.032 # grams
+L = 0.0475 # cm
+
+beta_max = 57
+beta_min = 15
+Iyy = 2
+alpha = 2.0 * Iyy / (M * L ** 2)
+theta_d_max = 1600
+
+max_thrust = 60000
 
 class Comm:
 
@@ -25,7 +47,7 @@ class Comm:
 
         self._cf = Crazyflie()
 
-        self.mc = MotionCommander(self._cf, default_height=0.7)
+        self.mc = MotionCommander(self._cf, default_height=0.8)
 
         self._cf.connected.add_callback(self._connected)
         self._cf.disconnected.add_callback(self._disconnected)
@@ -36,7 +58,6 @@ class Comm:
 
         print('Connecting to %s' % link_uri)
         self.is_connected = True
-
 
     def _connected(self, link_uri):
         """ This callback is called from the Crazyflie API when a Crazyflie
@@ -115,43 +136,57 @@ class Comm:
 
     def _disconnected(self, link_uri):
         """Callback when the Crazyflie is disconnected (called in all cases)"""
-        print('Disconnected from %s' % link_uri) #mc = MotionCommander(self._cf)
+        print('Disconnected from %s' % link_uri)
 
-    def send_setpoint(self, roll, pitch, yaw, thrust):
-        """
-        Send a new control setpoint for roll/pitch/yaw/thrust to the copter
-
-        The arguments roll/pitch/yaw/trust is the new setpoints that should
-        be sent to the copter
-        """
-        if thrust > 0xFFFF or thrust < 0:
-            raise ValueError('Thrust must be between 0 and 0xFFFF')
-
-        if self._x_mode:
-            roll, pitch = 0.707 * (roll - pitch), 0.707 * (roll + pitch)
-
-        pk = CRTPPacket()
-        pk.port = CRTPPort.COMMANDER
-        pk.data = struct.pack('<fffH', roll, -pitch, yaw, thrust)
-        self._cf.send_packet(pk)
+    
 
     def flip_test(self): 
 
-        # Unlock startup thrust protection
-        self._cf.commander.send_setpoint(0, 0, 0, 0)
-
+        # U1 = 0.9 * beta_max
+        # U2 = 0.5 * (beta_max + beta_min)
+        # U3 = beta_min
+        # U4 = U2
+        # U5 = U1      
         
-        print 'Beginning test...'
-      
+        # theta_dd1 = -(beta_max - U1) / (alpha * L)
+        # theta_dd2 = (beta_max - beta_min) / (2.0 * alpha * L)
+        # theta_dd3 = 0.0
+        # theta_dd4 = -theta_dd2
+        # theta_dd5 = (beta_max - U5) / (alpha * L)
+
+        # T3 = (2 * pi - (theta_d_max ** 2) / (2 * theta_dd2))
+
+        # T2 = (theta_d_max - theta_dd1 * T1)    
+
+        # self.mc._cf.close_link()
+
+        print 'Input to start'
+
+        c = raw_input()
+          
         self.mc.take_off()
 
-        
-        thrust = 35000
-        self._cf.commander.send_setpoint(0, 0, 0, thrust) 
-        time.sleep(1)
+        print 'Input to start'
 
-        self._cf.commander.send_setpoint(0, 0, 0, 0	) 
+        c = raw_input()
+        print 'Beginning test...'
+        print 'asdf'
+        self.mc._cf.commander.send_setpoint(0,0,0,max_thrust)
+               
 
+        time.sleep(2)
+
+        self.mc._cf.commander.send_setpoint(360*10,0,0,max_thrust)
+
+        time.sleep(0.5)
+
+        # self.mc._cf.commander.send_setpoint(0,0,0,max_thrust*0.5)
+
+        # time.sleep(1)
+
+        self.mc._cf.commander.send_setpoint(0,0,0,max_thrust)
+
+        self.mc.stop()
             
 
 if __name__ == '__main__':
@@ -163,9 +198,6 @@ if __name__ == '__main__':
 
         print('Scanning interfaces for Crazyflies...')
         available = cflib.crtp.scan_interfaces()
-
-        for i in available:
-            print('Found: ' + i[0])
             
         if len(available) > 0:
             le = Comm('radio://0/80/2M')

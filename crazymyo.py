@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import sys
 import logging
 import time
@@ -575,7 +573,7 @@ class FlightCtrl:
         except Exception, e:
             print (str(e))
             scf.close_link()
-
+            
 #Myo events class
 class Myo:
 
@@ -618,12 +616,15 @@ def main():
 
         scf = SyncCrazyflie(URI)
         fc = FlightCtrl(scf)
-        m = Myo()
+        #m = Myo()
 
-        Thread(target = fc.gesture_ctrl, args = (scf,fc, gesture)).start()
-        Thread(target = m.gesture_detection, args = (gesture,)).start()
+        #Thread(target = fc.gesture_ctrl, args = (scf,fc, gesture)).start()
+        #Thread(target = m.gesture_detection, args = (gesture,)).start()
 
         while True:
+            if scf.vbat is not None:
+                # Should clean this up so it doesn't print all the time. Maybe every 0.5V drop
+                print "Battery voltage: %.2f\n" % (scf.vbat,)
             time.sleep(0.5)
 
 
@@ -642,9 +643,6 @@ def main():
 
         scf.close_link()
         sys.exit(0)
-
-
-
 
 if __name__ == '__main__':
     main()

@@ -99,6 +99,7 @@ class MotionCommander:
 
         self._thread = _SetPointThread(self._cf)
         self._thread.start()
+        print 'Thread running...'
 
         if height is None:
             height = self.default_height
@@ -422,15 +423,19 @@ class _SetPointThread(Thread):
     TERMINATE_EVENT = 'terminate'
     UPDATE_PERIOD = 0.2
     ABS_Z_INDEX = 3
+    FLIP = 'flip'
 
     def __init__(self, cf, update_period=UPDATE_PERIOD):
         Thread.__init__(self)
+        print 'Thread init done...'
         self.update_period = update_period
 
         self._queue = Queue()
         self._cf = cf
 
         self._hover_setpoint = [0.0, 0.0, 0.0, 0.0]
+        self._cf.commander.send_setpoint(0, 0, 0, 0)
+        print 'a'
 
         self._z_base = 0.0
         self._z_velocity = 0.0
@@ -457,12 +462,20 @@ class _SetPointThread(Thread):
         """
         return self._hover_setpoint[self.ABS_Z_INDEX]
 
+    def flip(self, tmp, roll, pitch, yaw, thrust):
+
+        # self._cf.commander.send_setpoint(roll, pitch, yaw, thrust)
+
+        pass
+
     def run(self):
         while True:
             try:
                 event = self._queue.get(block=True, timeout=self.update_period)
                 if event == self.TERMINATE_EVENT:
                     return
+                # elif event[0] == self.FLIP:
+                #     self.flip(*event)
 
                 self._new_setpoint(*event)
             except Empty:
