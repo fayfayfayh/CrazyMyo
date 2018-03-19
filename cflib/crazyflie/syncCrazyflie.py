@@ -55,6 +55,7 @@ class SyncCrazyflie:
         self._connect_event = Event()
         self._is_link_open = False
         self._error_message = None
+        self.vbat = None
 
         self.cf.connected.add_callback(self._connected)
         self.cf.connection_failed.add_callback(self._connection_failed)
@@ -91,15 +92,10 @@ class SyncCrazyflie:
         self._is_link_open = True
         self._connect_event.set()
 
-        #self.param.set_value('kalman.resetEstimation', '1')
-        #time.sleep(0.1)
-        #self.param.set_value('kalman.resetEstimation', '0')
-        #time.sleep(2)
-
-
 
         #Open threads for recording sensor data
         Thread(target = self._getStabilizer).start()
+        Thread(target = self._getVbat).start()
         #Thread(target = self._getAccelerometer).start()
         #Thread(target = self._getGyroscope).start()
 
@@ -116,6 +112,14 @@ class SyncCrazyflie:
 
 
     """all definition after this point is for status monitor"""
+
+    def _vbat_log_data(self, timestamp, _vbat, logconf):
+        self.vbat = _vbat['pm.vbat']
+        
+
+    def _vbat_log_error(self, logconf, msg):
+        """Callback from the log API when an error occurs"""
+        print('Error when logging %s: %s' % (logconf.name, msg))
 
     def _stab_log_error(self, logconf, msg):
         """Callback from the log API when an error occurs"""
@@ -138,6 +142,26 @@ class SyncCrazyflie:
     def _log_accel_data(self, timestamp, data, logconf):
         with open('AccelerometerData.txt', 'a') as AccelerometerData:
             AccelerometerData.write('[%d][%s]: %s \n' % (timestamp, logconf.name, data))
+
+    def _getVbat(self):
+
+        self._lg_vbat = LogConfig(name='bat', period_in_ms=10)
+        self._lg_vbat.add_variable('pm.vbat', 'float')
+
+        try:
+            self.cf.log.add_config(self._lg_vbat)
+            # This callback will receive the data
+            self._lg_vbat.data_received_cb.add_callback(self._vbat_log_data)
+            # This callback will be called on errors
+            #self._lg_vbat.error_cb.add_callback(self._stab_vbat_error)
+            # Start the logging
+            self._lg_vbat.start()
+
+        except KeyError as e:
+            print('Could not start log configuration,'
+                  '{} not found in TOC'.format(str(e)))
+        # except AttributeError:
+        #     print('Could not add battery log config, bad configuration.')
 
     def _getStabilizer(self):
          # The definition of the logconfig can be made before connecting
