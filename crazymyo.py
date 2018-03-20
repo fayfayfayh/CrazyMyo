@@ -71,10 +71,8 @@ inPose = False #flag to see if a pose is currently active
 consecDoubleTaps = 0 #for landing
 
 
-# These need to be reworked
-
-
-
+WARN_VBAT = 3.3
+MIN_VBAT = 3.15
 
 #Myo event listener- specialized for calibration type behaviour
 class Calibration_Listener(libmyo.DeviceListener):
@@ -276,25 +274,8 @@ class Listener(libmyo.DeviceListener):
         self.last_time = ctime
 
         parts = []
-        # if self.orientation:
-        #     for comp in self.orientation:
-        #         parts.append(str(comp).ljust(15))
-
-
-
-
-
-        # if self.acceleration:
-        #     for comp in self.acceleration:
-        #         parts.append(str(comp).ljust(15))
-
         parts.append(str(self.pose).ljust(10))
-        # parts.append('E' if self.emg_enabled else ' ')
-        # parts.append('L' if self.locked else ' ')
-        # parts.append(self.rssi or 'NORSSI')
-        # if self.emg:
-        #     for comp in self.emg:
-        #         parts.append(str(comp).ljust(5))
+
         #print('\r\n' + ''.join('[{0}]'.format(p) for p in parts), end='')
         #sys.stdout.flush()
 
@@ -384,6 +365,7 @@ class Listener(libmyo.DeviceListener):
 
                 print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
+        # TODO: delete this one
         if abs(deltaRoll) >= minRot and abs(deltaRoll) > abs(deltaYaw) and abs(deltaRoll) > abs(deltaPitch) and inPose == False:
             if curPose == libmyo.Pose.fist:
                 consecDoubleTaps = 0
@@ -391,8 +373,6 @@ class Listener(libmyo.DeviceListener):
 
                 #gesture.add_gesture((curPose,roll_id, deltaRoll))
 
-
-                #print("ROLL! - Roll angle: " + str(math.degrees(deltaRoll))+"\n")
 
         if abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch) and abs(deltaYaw) > abs(deltaRoll) and inPose == False:
             if curPose == libmyo.Pose.fist:#left right motion
@@ -516,96 +496,88 @@ class FlightCtrl:
     lvSpeed = 0.3
 
 
-    def __init__(self, scf):
+    def __init__(self, _scf):
 
-        scf.open_link()
+        self.mc = MotionCommander(_scf)
+        self.scf = _scf
+        self.scf.open_link()
 
-
-    def perform_gesture(self, scf, g_id, mc):
+    def perform_gesture(self, g_id):
         global consecDoubleTaps
 
         d = 0.3
 
-        if g_id[1] == roll_id:
-            print("Corresponds to roll")
-            print(g_id[0])
-        elif g_id[1] == pitch_id:
-            print("Corresponds to pitch")
-            print(g_id[0])
-        elif g_id[1] == yaw_id:
-            print("Corresponds to yaw")
-            print(g_id[0])
-
         if g_id[0] == DOUBLE_TAP:
-            if mc._is_flying:
+            if self.mc._is_flying:
                 print("Hovering...")
                 #mc.stop()
                 self.resetYawInit()
             else:
                 consecDoubleTaps = 0
                 print("Taking off...")
-                mc.take_off()
+                self.mc.take_off()
                 self.resetYawInit()
-                threadUpdate = Thread(target = self._updateYaw, args = (scf,))
+                threadUpdate = Thread(target = self._updateYaw, args = (self.scf,))
                 threadUpdate.start()
 
 
         elif g_id[0] == FIST and g_id[1] == yaw_id:
             print("Roll...")
             #mc.move_distance(0,math.copysign(d, g_id[2]),0)
-            if (g_id[2] > 0):
+            if (g_id[2] < 0):
                 #turn left
                 print("turning left")
-                mc.move_distance(self.lvSpeed * self.lfCoef[0], self.lvSpeed * self.lfCoef[1], 0)
+                self.mc.move_distance(self.lvSpeed * self.lfCoef[0], self.lvSpeed * self.lfCoef[1], 0)
             else:
                 #turn right
                 print("turning right")
-                mc.move_distance(self.lvSpeed * self.rtCoef[0], self.lvSpeed * self.rtCoef[1], 0)
+                self.mc.move_distance(self.lvSpeed * self.rtCoef[0], self.lvSpeed * self.rtCoef[1], 0)
 
 
         elif g_id[0] == FIST and g_id[1] == pitch_id:
             print("Pitch...")
             #mc.move_distance(math.copysign(d, g_id[2]), 0, 0)
-            if (g_id[2] < 0):
+            if (g_id[2] > 0):
                 #move forward
                 print("moving forward")
-                mc.move_distance(self.lvSpeed * self.fwCoef[0], self.lvSpeed * self.fwCoef[1], 0)
+                self.mc.move_distance(self.lvSpeed * self.fwCoef[0], self.lvSpeed * self.fwCoef[1], 0)
             else:
                 #move backward
                 print("moving backward")
-                mc.move_distance(self.lvSpeed * self.bkCoef[0], self.lvSpeed * self.bkCoef[1], 0)
+                self.mc.move_distance(self.lvSpeed * self.bkCoef[0], self.lvSpeed * self.bkCoef[1], 0)
 
 
         elif g_id[0] == FINGERS_SPREAD and g_id[1] == pitch_id:
 
-            if g_id[2] > 0:
-                #if mc._thread.get_height() + d < mc.max_height:
-                print ("Up...")
-                mc.up(d)
-                #else:
-                    #print("Max. height" + mc.max_height + "m reached: requested height: " + (mc._thread.get_height() + d))
+            if g_id[2] < 0:
+                if self.mc._thread.get_height() + d < self.mc.max_height:
+                    print ("Up...")
+                    self.mc.up(d)
+                else:
+                    print("Max. height %.2fm reached: requested height: %.2f") % (self.mc.max_height, self.mc._thread.get_height() + d)
 
             else:
-                #if mc._thread.get_height() - d < mc.min_height:
-                print("Down...")
-                mc.down(d)
-                #else:
-                #    print("Min. height" + mc.min_height + "m reached: requested height: " + (mc._thread.get_height() - d))
+                if self.mc._thread.get_height() - d < self.mc.min_height:
+                    print("Down...")
+                    self.mc.down(d)
+                else:
+                    print("Max. height %.2fm reached: requested height: %.2f") % (self.mc.max_height, self.mc._thread.get_height() + d)
 
         elif g_id[0] == FINGERS_SPREAD and g_id[1] == yaw_id:
             print ('Yaw...')
             if g_id[2] < 0:
-                mc.turn_left(30)
+                self.mc.turn_left(30)
             else:
-                mc.turn_right(30)
+                self.mc.turn_right(30)
 
         elif g_id[0] == LAND:
             print("Landing...")
-            mc.land()
+            self.mc.land()
 
         else: #rest behaviour
-            if mc._is_flying:
-                mc.stop()
+            if self.mc._is_flying:
+                self.mc.stop()
+
     """Functions to update attitude by reading storage text file"""
     def updateCoef(self):
         try:
@@ -614,7 +586,8 @@ class FlightCtrl:
             self.lfCoef = [sin(self.theta), cos(self.theta)]
             self.fwCoef = [cos(self.theta), -sin(self.theta)]
             self.bkCoef = [-cos(self.theta), sin(self.theta)]
-        except Exception,e:
+        except Exception, e:
+            print str(e)
             print("Update failed")
 
     def updateYawCurr(self):
@@ -623,12 +596,12 @@ class FlightCtrl:
                 stbLines = stbFile.readlines()
 
             currAttitude = stbLines[len(stbLines)-1]
-            dumb1, dumb2, currentYaw, dumb3 = currAttitude.split(',')
+            currentYaw = currAttitude.split(',')[2]
             self.yawCurr = float(currentYaw)
             #update all coefficients after updating the yaw angle
             coef = self.updateCoef()
         except Exception, e:
-            #print str(e)
+            print str(e)
             print("Update current yaw failed")
 
     def resetYawInit(self):
@@ -641,15 +614,14 @@ class FlightCtrl:
                 with open('SensorMaster.txt','r') as stbFile:
                     stbLines = stbFile.readlines()
 
-            print("yaw angle recalibrated :")
             newInitAttitude = stbLines[len(stbLines)-1]
+            initYaw = newInitAttitude.split(',')[2]
+            print("Yaw angle recalibrated: %2f") % (float(initYaw),)
 
-            dumb1, dumb2, initYaw, dumb3 = newInitAttitude.split(',')
-            print(initYaw)
             self.yawInit = float(initYaw)
         except Exception, e:
-            #print str(e)
-            print("reset failed")
+            print str(e)
+            print("Reset failed!")
 
     def _updateYaw(self, scf):
         try:
@@ -658,15 +630,13 @@ class FlightCtrl:
                 time.sleep(0.1)
 
         except Exception, e:
-            #print str(e)
+            print str(e)
             print("Update failed, Landing")
             scf.close_link()
 
-    def gesture_ctrl(self, scf, fc, g):
+    def gesture_ctrl(self, fc, g):
         global gesture
-        mc = MotionCommander(scf)
-        mc._reset_position_estimator()
-
+        
         self.resetYawInit()
 
         try:
@@ -676,13 +646,11 @@ class FlightCtrl:
                 g_id = gesture.get_gesture()
 
                 if g_id is not None:
-                    #print("Gesture detected: ")
-                    #print(g_id)
-                    fc.perform_gesture(scf, g_id, mc)
+                    fc.perform_gesture(g_id)
 
         except Exception, e:
             print (str(e))
-            scf.close_link()
+            self.scf.close_link()
             
 #Myo events class
 class Myo:
@@ -710,9 +678,7 @@ class Myo:
                 time.sleep(0.25)
         except KeyboardInterrupt:
             print("\nQuitting ...")
-            #perhaps try landing here too
-        #except :
-
+            
         finally:
             print("Shutting down hub...")
             hub.shutdown()
@@ -721,31 +687,44 @@ class Myo:
 def main():
 
     try:
+        
         #logfile reset
         myfile = open('SensorMaster.txt', 'w')
         myfile.write
         myfile.close()
 
         cflib.crtp.init_drivers(enable_debug_driver=False)
-
+        
         scf = SyncCrazyflie(URI)
+        
         fc = FlightCtrl(scf)
-        #m = Myo()
 
-        #Thread(target = fc.gesture_ctrl, args = (scf,fc, gesture)).start()
-        #Thread(target = m.gesture_detection, args = (gesture,)).start()
-
+        m = Myo()
+        
+        Thread(target = fc.gesture_ctrl, args = (fc, gesture)).start()
+        Thread(target = m.gesture_detection, args = (gesture,)).start()
+        
         while True:
+            t = int(time.time())
             if scf.vbat is not None:
-                # Should clean this up so it doesn't print all the time. Maybe every 0.5V drop
-                print "Battery voltage: %.2f\n" % (scf.vbat,)
+                if t % 20 == 0: # print every 20 seconds
+                    print "Battery voltage: %.2fV" % (scf.vbat,)
+
+                if t % 5 == 0 and scf.vbat > MIN_VBAT and scf.vbat < WARN_VBAT:
+                    print "WARN: Battery voltage: %.2fV. Landing soon..." % (scf.vbat,)
+                    # would be nice to have some sort of vibration indicator here and below
+
+                if t % 5 == 0 and scf.vbat < MIN_VBAT:
+                    print "Battery voltage %.2f too low; landing..." % (scf.vbat)
+                    fc.mc.land()
+
+                    os.kill(os.getpid(), signal.SIGINT)
+
+
             time.sleep(0.5)
-
-
 
     except KeyboardInterrupt:
         print('\nClosing link...')
-        #perhaps land gracefully here
         scf.close_link()
 
         print('Shutting down...')
@@ -753,7 +732,7 @@ def main():
 
     except Exception, e:
         print(str(e))
-        print('\nShutting down...')
+        print('\nShutting down... (main)')
 
         scf.close_link()
         sys.exit(0)

@@ -99,12 +99,9 @@ class MotionCommander:
 
         self._thread = _SetPointThread(self._cf)
         self._thread.start()
-        print 'Thread running...'
 
         if height is None:
             height = self.default_height
-        else:
-            print height
 
         self.up(height, velocity)
 
@@ -427,7 +424,6 @@ class _SetPointThread(Thread):
 
     def __init__(self, cf, update_period=UPDATE_PERIOD):
         Thread.__init__(self)
-        print 'Thread init done...'
         self.update_period = update_period
 
         self._queue = Queue()
@@ -435,7 +431,6 @@ class _SetPointThread(Thread):
 
         self._hover_setpoint = [0.0, 0.0, 0.0, 0.0]
         self._cf.commander.send_setpoint(0, 0, 0, 0)
-        print 'a'
 
         self._z_base = 0.0
         self._z_velocity = 0.0

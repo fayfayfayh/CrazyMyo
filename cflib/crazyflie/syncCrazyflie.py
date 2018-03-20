@@ -152,16 +152,15 @@ class SyncCrazyflie:
             self.cf.log.add_config(self._lg_vbat)
             # This callback will receive the data
             self._lg_vbat.data_received_cb.add_callback(self._vbat_log_data)
-            # This callback will be called on errors
-            #self._lg_vbat.error_cb.add_callback(self._stab_vbat_error)
+
             # Start the logging
             self._lg_vbat.start()
 
         except KeyError as e:
             print('Could not start log configuration,'
                   '{} not found in TOC'.format(str(e)))
-        # except AttributeError:
-        #     print('Could not add battery log config, bad configuration.')
+        except AttributeError:
+            print('Could not add battery log config, bad configuration.')
 
     def _getStabilizer(self):
          # The definition of the logconfig can be made before connecting
