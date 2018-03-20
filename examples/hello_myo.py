@@ -34,7 +34,7 @@ inCalibration = False
 restingRoll = 0  #resting orientation
 restingPitch = 0  #resting orientation
 restingYaw = 0  #resting orientation
-minRot = 0.35 # must rotate arm at least this much for gesture detection
+minRot = 0.785 # must rotate arm at least this much for gesture detection try 35 degs first
 inPose = False #flag to see if a pose is currently active
 
 
@@ -307,29 +307,21 @@ class Listener(libmyo.DeviceListener):
         deltaPitch = pitch - restingPitch
         deltaYaw = yaw - restingYaw
 
-        if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw) and abs(deltaPitch) > abs(deltaRoll) and inPose == False:
-            if curPose == libmyo.Pose.fingers_spread: #UP DOWN
+        if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw):
+            if curPose == libmyo.Pose.fist: #UP DOWN
                 inPose = True
 
 
                 print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
-            elif curPose == libmyo.Pose.fist: #forward/backward
+            else: #forward/backward
                 inPose = True
 
 
                 print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
-        if abs(deltaRoll) >= minRot and abs(deltaRoll) > abs(deltaYaw) and abs(deltaRoll) > abs(deltaPitch) and inPose == False:
-            if curPose == libmyo.Pose.fist:
-                inPose = True
 
-
-
-
-                print("ROLL! - Roll angle: " + str(math.degrees(deltaRoll))+"\n")
-
-        if abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch) and abs(deltaYaw) > abs(deltaRoll) and inPose == False:
-            if curPose == libmyo.Pose.fist:#left right motion
+        elif abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch):
+            if curPose != libmyo.Pose.fist:#left right motion
                 inPose = True
 
 
@@ -337,7 +329,7 @@ class Listener(libmyo.DeviceListener):
 
                 print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
-            elif curPose == libmyo.Pose.fingers_spread: #yaw drone
+            elif curPose == libmyo.Pose.fist: #yaw drone
                 inPose = True
 
 
