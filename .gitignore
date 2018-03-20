@@ -6,3 +6,5 @@ examples/acceleration_logo_on_bottom.png
 examples/acceleration_logo_on_left.png
 SensorMaster.txt
 *.png
+cflib/positioning/*.pyc
+cflib/crazyflie/*.pyc
