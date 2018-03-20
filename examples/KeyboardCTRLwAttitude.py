@@ -129,7 +129,7 @@ class flightCtrl:
 
             currAttitude = stbLines[len(stbLines)-1]
             need, to, currentYaw, test = currAttitude.split(',')
-            self.yawCurr = float(currentYaw)
+            self.initYaw = float(currentYaw)
 
             threadUpdate = Thread(target = self._updateYaw, args = (scf,))
             threadUpdate.start()

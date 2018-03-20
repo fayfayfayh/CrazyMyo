@@ -20,6 +20,7 @@ import signal
 import myo as libmyo; libmyo.init()
 import numpy as np
 import math
+from math import sin, cos
 
 """
 Gestures SUPPORTED
@@ -36,10 +37,10 @@ Gestures SUPPORTED
 Gestures are sent in the following format:
     (myo_pose, rotation_type, rotation_angle)
 myo_pose is one of:
-    1) libmyo.Pose.double_tap
-    2) libmyo.Pose.fingers_spread
-    3) libmyo.Pose.rest
-    4) libmyo.Pose.fist
+    1) DOUBLE_TAP
+    2) FINGERS_SPREAD
+    3) REST
+    4) FIST
     5) LAND (to accommodate landing)
 rotation_type is one of
     1) roll
@@ -49,14 +50,17 @@ rotation_angle is an angle in radians
 For double taps and rests, the last two variables can safely be ignored.
 
 """
-
+#rotation_type constants
 roll_id = 1
 pitch_id = 2
 yaw_id = 3
 
-DOUBLE_TAP = libmyo.Pose.double_tap
-FIST = libmyo.Pose.fist
-FINGERS_SPREAD = libmyo.Pose.fingers_spread
+#myo_pose constants
+DOUBLE_TAP = 1
+FIST = 2
+FINGERS_SPREAD = 3
+REST = 4
+LAND = 95 #triggered by two consecutive double tap poses
 
 #myo globals
 restingRoll = 0  #resting orientation
@@ -64,21 +68,13 @@ restingPitch = 0  #resting orientation
 restingYaw = 0  #resting orientation
 minRot = 0.35 # must rotate arm at least this many RADIANS for gesture detection
 inPose = False #flag to see if a pose is currently active
+consecDoubleTaps = 0 #for landing
+
 
 # These need to be reworked
 
-LAND = 95 #triggered by two consecutive double tap poses
-UP = 3 #negative pitch angle
-DOWN = 4 #positive pitch angle
-LEFT = 5 #positive angle
-RIGHT = 6 #negative angle
-FORWARD = 7 #downward motion = positive pitch angle
-BACKWARD = 8 #upward motion = negative pitch angle
-TILT_RIGHT = 9 #CW ROTATION POS ANGLES
-TILT_LEFT = 10 #CCW ROTATION  NEG ANGLES
-YAW_RIGHT = 11 #negative angle
-YAW_LEFT = 12 #positive angle
-REST = 13 #hover like with double tap
+
+
 
 #Myo event listener- specialized for calibration type behaviour
 class Calibration_Listener(libmyo.DeviceListener):
@@ -102,7 +98,7 @@ class Calibration_Listener(libmyo.DeviceListener):
         self.last_time = 0
 
     def output(self):
-        # TODO: Should clean up these comments 
+        # TODO: Should clean up these comments
         ctime = time.time()
         if (ctime - self.last_time) < self.interval:
             return
@@ -154,6 +150,8 @@ class Calibration_Listener(libmyo.DeviceListener):
             restingYaw = math.atan2(2.0*(lastQuat[3]*lastQuat[2] + lastQuat[0]*lastQuat[1]), 1.0 - 2.0*( lastQuat[1]*lastQuat[1] + lastQuat[2]*lastQuat[2]))
             print("Detected default orientation [" + str(restingRoll) + "," + str(restingPitch) + "," + str(restingYaw) +"]\n")
             self.output()
+            myo.vibrate ('long')
+            myo.vibrate ('short')
             return False
 
         elif pose == libmyo.Pose.fingers_spread:
@@ -313,24 +311,36 @@ class Listener(libmyo.DeviceListener):
     def on_pose(self, myo, timestamp, pose):
         global inPose
         global gesture
+        global consecDoubleTaps
 
         if pose == libmyo.Pose.rest:
             inPose = False
-            gesture.add_gesture((pose,0,0))
+            gesture.add_gesture((REST,0,0))
 
         if pose == libmyo.Pose.double_tap: #double tap detected
-
+            consecDoubleTaps = consecDoubleTaps + 1
             myo.set_stream_emg(libmyo.StreamEmg.enabled)
             self.emg_enabled = True
-            if self.pose != libmyo.Pose.double_tap:
-                print("Double tap detected")
+            if consecDoubleTaps < 2:
+                print("Double tap detected: Recalibration!\n")
                 inPose = False
-                
-                gesture.add_gesture((pose,0,0))
-                
+
+                lastQuat = self.orientation #last orientation in quarternion
+                restingRoll = math.atan2(2.0*(lastQuat[3]*lastQuat[0] + lastQuat[1]*lastQuat[2]), 1.0 - 2.0*(lastQuat[0]*lastQuat[0] + lastQuat[1] * lastQuat[1]))
+                restingPitch = math.asin(max(-1.0, min(1.0, 2.0*(lastQuat[3]*lastQuat[1] - lastQuat[2]*lastQuat[0]))))
+                restingYaw = math.atan2(2.0*(lastQuat[3]*lastQuat[2] + lastQuat[0]*lastQuat[1]), 1.0 - 2.0*( lastQuat[1]*lastQuat[1] + lastQuat[2]*lastQuat[2]))
+                print("Detected default orientation [" + str(restingRoll) + "," + str(restingPitch) + "," + str(restingYaw) +"]\n")
+                #self.output()
+                myo.vibrate ('long')
+                myo.vibrate ('short')
+                gesture.add_gesture((DOUBLE_TAP,0,0))
+
+
+
             else: #this means we want to land if we get two double taps in a row
                 inPose = False
                 gesture.add_gesture((LAND,0,0))
+                consecDoubleTaps = 0
 
 
         elif pose == libmyo.Pose.fingers_spread:
@@ -348,6 +358,7 @@ class Listener(libmyo.DeviceListener):
         global restingPitch
         global inPose
         global gesture
+        global consecDoubleTaps
         self.orientation = orientation
         curPose = self.pose
         lastQuat = orientation #last orientation in quarternion
@@ -361,18 +372,21 @@ class Listener(libmyo.DeviceListener):
 
         if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw) and abs(deltaPitch) > abs(deltaRoll) and inPose == False:
             if curPose == libmyo.Pose.fingers_spread: #UP DOWN
+                consecDoubleTaps = 0
                 inPose = True
-                gesture.add_gesture((curPose,pitch_id,deltaPitch))
+                gesture.add_gesture((FINGERS_SPREAD,pitch_id,deltaPitch))
 
                 print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
             elif curPose == libmyo.Pose.fist: #forward/backward
+                consecDoubleTaps = 0
                 inPose = True
-                gesture.add_gesture((curPose,pitch_id, deltaPitch))
+                gesture.add_gesture((FIST,pitch_id, deltaPitch))
 
                 print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
         if abs(deltaRoll) >= minRot and abs(deltaRoll) > abs(deltaYaw) and abs(deltaRoll) > abs(deltaPitch) and inPose == False:
             if curPose == libmyo.Pose.fist:
+                consecDoubleTaps = 0
                 inPose = True
 
                 #gesture.add_gesture((curPose,roll_id, deltaRoll))
@@ -382,17 +396,19 @@ class Listener(libmyo.DeviceListener):
 
         if abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch) and abs(deltaYaw) > abs(deltaRoll) and inPose == False:
             if curPose == libmyo.Pose.fist:#left right motion
+                consecDoubleTaps = 0
                 inPose = True
 
-                gesture.add_gesture((curPose,yaw_id,deltaYaw))
+                gesture.add_gesture((FIST,yaw_id,deltaYaw))
 
 
                 print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
             elif curPose == libmyo.Pose.fingers_spread: #yaw drone
+                consecDoubleTaps = 0
                 inPose = True
 
-                gesture.add_gesture((curPose,yaw_id, deltaYaw))
+                gesture.add_gesture((FINGERS_SPREAD,yaw_id, deltaYaw))
 
                 print("YAW DRONE left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
@@ -489,12 +505,24 @@ logging.basicConfig(level=logging.ERROR)
 
 class FlightCtrl:
 
+    #initialize variables for attitude tracking
+    yawInit = 0
+    yawCurr = 0
+    theta = 0
+    rtCoef = [0,-1]
+    lfCoef = [0,1]
+    fwCoef = [1,0]
+    bkCoef = [-1,0]
+    lvSpeed = 0.3
+
+
     def __init__(self, scf):
 
         scf.open_link()
-    
 
-    def perform_gesture(self, g_id, mc):
+
+    def perform_gesture(self, scf, g_id, mc):
+        global consecDoubleTaps
 
         d = 0.3
 
@@ -509,24 +537,48 @@ class FlightCtrl:
             print(g_id[0])
 
         if g_id[0] == DOUBLE_TAP:
-            if mc._is_flying: 
+            if mc._is_flying:
                 print("Hovering...")
-                mc.stop()
+                #mc.stop()
+                self.resetYawInit()
             else:
+                consecDoubleTaps = 0
                 print("Taking off...")
                 mc.take_off()
+                self.resetYawInit()
+                threadUpdate = Thread(target = self._updateYaw, args = (scf,))
+                threadUpdate.start()
+
 
         elif g_id[0] == FIST and g_id[1] == yaw_id:
             print("Roll...")
-            mc.move_distance(0,math.copysign(d, g_id[2]),0)
+            #mc.move_distance(0,math.copysign(d, g_id[2]),0)
+            if (g_id[2] > 0):
+                #turn left
+                print("turning left")
+                mc.move_distance(self.lvSpeed * self.lfCoef[0], self.lvSpeed * self.lfCoef[1], 0)
+            else:
+                #turn right
+                print("turning right")
+                mc.move_distance(self.lvSpeed * self.rtCoef[0], self.lvSpeed * self.rtCoef[1], 0)
+
 
         elif g_id[0] == FIST and g_id[1] == pitch_id:
             print("Pitch...")
-            mc.move_distance(math.copysign(d, g_id[2]), 0, 0)
-        
+            #mc.move_distance(math.copysign(d, g_id[2]), 0, 0)
+            if (g_id[2] < 0):
+                #move forward
+                print("moving forward")
+                mc.move_distance(self.lvSpeed * self.fwCoef[0], self.lvSpeed * self.fwCoef[1], 0)
+            else:
+                #move backward
+                print("moving backward")
+                mc.move_distance(self.lvSpeed * self.bkCoef[0], self.lvSpeed * self.bkCoef[1], 0)
+
+
         elif g_id[0] == FINGERS_SPREAD and g_id[1] == pitch_id:
-            
-            if g_id[2] < 0: 
+
+            if g_id[2] > 0:
                 #if mc._thread.get_height() + d < mc.max_height:
                 print ("Up...")
                 mc.up(d)
@@ -540,24 +592,82 @@ class FlightCtrl:
                 #else:
                 #    print("Min. height" + mc.min_height + "m reached: requested height: " + (mc._thread.get_height() - d))
 
-        elif g_id[0] == FINGERS_SPREAD and g_id[1] == yaw_id:   
-            print ('Yaw...') 
+        elif g_id[0] == FINGERS_SPREAD and g_id[1] == yaw_id:
+            print ('Yaw...')
             if g_id[2] < 0:
                 mc.turn_left(30)
             else:
                 mc.turn_right(30)
 
-        elif g_id[1] == LAND:
+        elif g_id[0] == LAND:
             print("Landing...")
             mc.land()
-        else:
+
+        else: #rest behaviour
             if mc._is_flying:
                 mc.stop()
+    """Functions to update attitude by reading storage text file"""
+    def updateCoef(self):
+        try:
+            self.theta = (self.yawCurr - self.yawInit)*(3.1415926/180)
+            self.rtCoef = [-sin(self.theta), -cos(self.theta)]
+            self.lfCoef = [sin(self.theta), cos(self.theta)]
+            self.fwCoef = [cos(self.theta), -sin(self.theta)]
+            self.bkCoef = [-cos(self.theta), sin(self.theta)]
+        except Exception,e:
+            print("Update failed")
+
+    def updateYawCurr(self):
+        try:
+            with open('SensorMaster.txt','r') as stbFile:
+                stbLines = stbFile.readlines()
+
+            currAttitude = stbLines[len(stbLines)-1]
+            dumb1, dumb2, currentYaw, dumb3 = currAttitude.split(',')
+            self.yawCurr = float(currentYaw)
+            #update all coefficients after updating the yaw angle
+            coef = self.updateCoef()
+        except Exception, e:
+            #print str(e)
+            print("Update current yaw failed")
+
+    def resetYawInit(self):
+        try:
+             #set recalibrate initial Yaw value
+            with open('SensorMaster.txt','r') as stbFile:
+                stbLines = stbFile.readlines()
+
+            while len(stbLines) == 0:
+                with open('SensorMaster.txt','r') as stbFile:
+                    stbLines = stbFile.readlines()
+
+            print("yaw angle recalibrated :")
+            newInitAttitude = stbLines[len(stbLines)-1]
+
+            dumb1, dumb2, initYaw, dumb3 = newInitAttitude.split(',')
+            print(initYaw)
+            self.yawInit = float(initYaw)
+        except Exception, e:
+            #print str(e)
+            print("reset failed")
+
+    def _updateYaw(self, scf):
+        try:
+            while True:
+                keepUpdating = self.updateYawCurr();
+                time.sleep(0.1)
+
+        except Exception, e:
+            #print str(e)
+            print("Update failed, Landing")
+            scf.close_link()
 
     def gesture_ctrl(self, scf, fc, g):
         global gesture
         mc = MotionCommander(scf)
         mc._reset_position_estimator()
+
+        self.resetYawInit()
 
         try:
 
@@ -568,8 +678,8 @@ class FlightCtrl:
                 if g_id is not None:
                     #print("Gesture detected: ")
                     #print(g_id)
-                    fc.perform_gesture(g_id, mc)
-                
+                    fc.perform_gesture(scf, g_id, mc)
+
         except Exception, e:
             print (str(e))
             scf.close_link()
@@ -581,7 +691,7 @@ class Myo:
         pass
 
     def gesture_detection(self, g):
-        
+
         print("Connecting to Myo ... Use CTRL^C to exit.")
         try:
             hub = libmyo.Hub()
@@ -611,6 +721,10 @@ class Myo:
 def main():
 
     try:
+        #logfile reset
+        myfile = open('SensorMaster.txt', 'w')
+        myfile.write
+        myfile.close()
 
         cflib.crtp.init_drivers(enable_debug_driver=False)
 
