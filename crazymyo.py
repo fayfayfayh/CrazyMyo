@@ -56,6 +56,7 @@ pitch_id = 2
 yaw_id = 3
 
 #myo_pose constants
+NO_POSE = 5
 DOUBLE_TAP = 1
 FIST = 2
 FINGERS_SPREAD = 3
@@ -66,8 +67,9 @@ LAND = 95 #triggered by two consecutive double tap poses
 restingRoll = 0  #resting orientation
 restingPitch = 0  #resting orientation
 restingYaw = 0  #resting orientation
-minRot = 0.35 # must rotate arm at least this many RADIANS for gesture detection
+minRot = 0.785 # must rotate arm at least this many RADIANS for gesture detection
 inPose = False #flag to see if a pose is currently active
+inMotion = False #flag to see if quad is in motion
 consecDoubleTaps = 0 #for landing
 
 
@@ -340,6 +342,7 @@ class Listener(libmyo.DeviceListener):
         global inPose
         global gesture
         global consecDoubleTaps
+        global inMotion
         self.orientation = orientation
         curPose = self.pose
         lastQuat = orientation #last orientation in quarternion
@@ -351,46 +354,46 @@ class Listener(libmyo.DeviceListener):
         deltaPitch = pitch - restingPitch
         deltaYaw = yaw - restingYaw
 
-        if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw) and abs(deltaPitch) > abs(deltaRoll) and inPose == False:
-            if curPose == libmyo.Pose.fingers_spread: #UP DOWN
+        if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw):
+            if curPose == libmyo.Pose.fist: #UP DOWN
                 consecDoubleTaps = 0
-                inPose = True
-                gesture.add_gesture((FINGERS_SPREAD,pitch_id,deltaPitch))
+
+                if inMotion == False: #if quad is moving - don't add gesture to queue
+                    gesture.add_gesture((FIST,pitch_id,deltaPitch))
 
                 print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
-            elif curPose == libmyo.Pose.fist: #forward/backward
+            else: #forward/backward
                 consecDoubleTaps = 0
-                inPose = True
-                gesture.add_gesture((FIST,pitch_id, deltaPitch))
+                if inMotion == False: #if quad is moving - don't add gesture to queue
+                    gesture.add_gesture((NO_POSE,pitch_id, deltaPitch))
 
                 print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
-        # TODO: delete this one
-        if abs(deltaRoll) >= minRot and abs(deltaRoll) > abs(deltaYaw) and abs(deltaRoll) > abs(deltaPitch) and inPose == False:
-            if curPose == libmyo.Pose.fist:
+
+
+
+        elif abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch):
+            if curPose != libmyo.Pose.fist:#left right motion
                 consecDoubleTaps = 0
                 inPose = True
-
-                #gesture.add_gesture((curPose,roll_id, deltaRoll))
-
-
-        if abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch) and abs(deltaYaw) > abs(deltaRoll) and inPose == False:
-            if curPose == libmyo.Pose.fist:#left right motion
-                consecDoubleTaps = 0
-                inPose = True
-
-                gesture.add_gesture((FIST,yaw_id,deltaYaw))
+                if inMotion == False: #if quad is moving - don't add gesture to queue
+                    gesture.add_gesture((NO_POSE,yaw_id,deltaYaw))
 
 
                 print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
-            elif curPose == libmyo.Pose.fingers_spread: #yaw drone
+            elif curPose == libmyo.Pose.fist: #yaw drone
                 consecDoubleTaps = 0
                 inPose = True
-
-                gesture.add_gesture((FINGERS_SPREAD,yaw_id, deltaYaw))
+                if inMotion == False: #if quad is moving - don't add gesture to queue
+                    gesture.add_gesture((FIST,yaw_id, deltaYaw))
 
                 print("YAW DRONE left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
+        else: # just Hover
+            gesture.add_gesture((REST,0,0))
+
+
+        #time.sleep(0.5)
 
 
     def on_accelerometor_data(self, myo, timestamp, acceleration):
@@ -504,6 +507,7 @@ class FlightCtrl:
 
     def perform_gesture(self, g_id):
         global consecDoubleTaps
+        global inMotion
 
         d = 0.3
 
@@ -515,68 +519,90 @@ class FlightCtrl:
             else:
                 consecDoubleTaps = 0
                 print("Taking off...")
+                inMotion = True
                 self.mc.take_off()
+                inMotion = False
                 self.resetYawInit()
                 threadUpdate = Thread(target = self._updateYaw, args = (self.scf,))
                 threadUpdate.start()
 
 
-        elif g_id[0] == FIST and g_id[1] == yaw_id:
+        elif g_id[0] == NO_POSE and g_id[1] == yaw_id:
             print("Roll...")
             #mc.move_distance(0,math.copysign(d, g_id[2]),0)
-            if (g_id[2] < 0):
+            if (g_id[2] > 0):
                 #turn left
                 print("turning left")
+                inMotion = True
                 self.mc.move_distance(self.lvSpeed * self.lfCoef[0], self.lvSpeed * self.lfCoef[1], 0)
+                inMotion = False
             else:
                 #turn right
                 print("turning right")
+                inMotion = True
                 self.mc.move_distance(self.lvSpeed * self.rtCoef[0], self.lvSpeed * self.rtCoef[1], 0)
+                inMotion = False
 
 
-        elif g_id[0] == FIST and g_id[1] == pitch_id:
+        elif g_id[0] == NO_POSE and g_id[1] == pitch_id:
             print("Pitch...")
             #mc.move_distance(math.copysign(d, g_id[2]), 0, 0)
-            if (g_id[2] > 0):
+            if (g_id[2] < 0):
                 #move forward
                 print("moving forward")
+                inMotion = True
                 self.mc.move_distance(self.lvSpeed * self.fwCoef[0], self.lvSpeed * self.fwCoef[1], 0)
+                inMotion = False
             else:
                 #move backward
                 print("moving backward")
+                inMotion = True
                 self.mc.move_distance(self.lvSpeed * self.bkCoef[0], self.lvSpeed * self.bkCoef[1], 0)
+                inMotion = False
 
 
-        elif g_id[0] == FINGERS_SPREAD and g_id[1] == pitch_id:
+        elif g_id[0] == FIST and g_id[1] == pitch_id:
 
-            if g_id[2] < 0:
+            if g_id[2] > 0:
                 if self.mc._thread.get_height() + d < self.mc.max_height:
                     print ("Up...")
+                    inMotion = True
                     self.mc.up(d)
+                    inMotion = False
                 else:
                     print("Max. height %.2fm reached: requested height: %.2f") % (self.mc.max_height, self.mc._thread.get_height() + d)
 
             else:
                 if self.mc._thread.get_height() - d < self.mc.min_height:
                     print("Down...")
+                    inMotion = True
                     self.mc.down(d)
+                    inMotion = False
                 else:
                     print("Max. height %.2fm reached: requested height: %.2f") % (self.mc.max_height, self.mc._thread.get_height() + d)
 
-        elif g_id[0] == FINGERS_SPREAD and g_id[1] == yaw_id:
+        elif g_id[0] == FIST and g_id[1] == yaw_id:
             print ('Yaw...')
             if g_id[2] < 0:
+                inMotion = True
                 self.mc.turn_left(30)
+                inMotion = False
             else:
+                inMotion = True
                 self.mc.turn_right(30)
+                inMotion = False
 
         elif g_id[0] == LAND:
             print("Landing...")
+            inMotion = True
             self.mc.land()
+            inMotion = False
 
         else: #rest behaviour
             if self.mc._is_flying:
+                inMotion = True
                 self.mc.stop()
+                inMotion = False
 
     """Functions to update attitude by reading storage text file"""
     def updateCoef(self):
@@ -636,7 +662,7 @@ class FlightCtrl:
 
     def gesture_ctrl(self, fc, g):
         global gesture
-        
+
         self.resetYawInit()
 
         try:
@@ -651,7 +677,7 @@ class FlightCtrl:
         except Exception, e:
             print (str(e))
             self.scf.close_link()
-            
+
 #Myo events class
 class Myo:
 
@@ -675,10 +701,10 @@ class Myo:
         # Listen to keyboard interrupts and stop the hub in that case.
         try:
             while hub.running:
-                time.sleep(0.25)
+                time.sleep(0.5)
         except KeyboardInterrupt:
             print("\nQuitting ...")
-            
+
         finally:
             print("Shutting down hub...")
             hub.shutdown()
@@ -687,23 +713,23 @@ class Myo:
 def main():
 
     try:
-        
+
         #logfile reset
         myfile = open('SensorMaster.txt', 'w')
         myfile.write
         myfile.close()
 
         cflib.crtp.init_drivers(enable_debug_driver=False)
-        
+
         scf = SyncCrazyflie(URI)
-        
+
         fc = FlightCtrl(scf)
 
         m = Myo()
-        
+
         Thread(target = fc.gesture_ctrl, args = (fc, gesture)).start()
         Thread(target = m.gesture_detection, args = (gesture,)).start()
-        
+
         while True:
             t = int(time.time())
             if scf.vbat is not None:
@@ -721,7 +747,7 @@ def main():
                     os.kill(os.getpid(), signal.SIGINT)
 
 
-            time.sleep(0.5)
+            time.sleep(0.1)
 
     except KeyboardInterrupt:
         print('\nClosing link...')
