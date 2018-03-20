@@ -498,7 +498,7 @@ class FlightCtrl:
 
     def __init__(self, _scf):
 
-        self.mc = MotionCommander(_scf)
+        self.mc = MotionCommander(_scf, default_height=0.7)
         self.scf = _scf
         self.scf.open_link()
 
