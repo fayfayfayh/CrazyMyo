@@ -21,7 +21,8 @@
 from __future__ import print_function
 #from scipy import integrate
 
-import myo as libmyo; libmyo.init()
+import myo as libmyo; #libmyo.init()
+libmyo.init('/Users/fayhuang/Desktop/Capstone/sdk/myo.framework')
 import time
 import sys
 import numpy as np
@@ -243,6 +244,7 @@ class Listener(libmyo.DeviceListener):
                 else:
                     print("Takeoff")
                     isFlying = True
+                    consecDoubleTaps = consecDoubleTaps + 1
 
             else: #this means we want to land if we get two double taps in a row
                 consecDoubleTaps = 0
