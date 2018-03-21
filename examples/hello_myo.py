@@ -138,15 +138,6 @@ class Calibration_Listener(libmyo.DeviceListener):
         self.acceleration = acceleration
         accelData.append([acceleration[0],acceleration[1], acceleration[2]])
 
-
-
-    def on_gyroscope_data(self, myo, timestamp, gyroscope):
-        self.gyroscope = gyroscope
-
-    def on_emg_data(self, myo, timestamp, emg):
-        self.emg = emg
-        #self.output()
-
     def on_unlock(self, myo, timestamp):
         self.locked = False
         #self.output()
@@ -155,43 +146,6 @@ class Calibration_Listener(libmyo.DeviceListener):
         self.locked = True
         #self.output()
 
-    def on_event(self, kind, event):
-        """
-        Called before any of the event callbacks.
-        """
-
-    def on_event_finished(self, kind, event):
-        """
-        Called after the respective event callbacks have been
-        invoked. This method is *always* triggered, even if one of
-        the callbacks requested the stop of the Hub.
-        """
-
-    def on_pair(self, myo, timestamp, firmware_version):
-        """
-        Called when a Myo armband is paired.
-        """
-
-    def on_unpair(self, myo, timestamp):
-        """
-        Called when a Myo armband is unpaired.
-        """
-
-    def on_disconnect(self, myo, timestamp):
-        """
-        Called when a Myo is disconnected.
-        """
-
-    def on_arm_sync(self, myo, timestamp, arm, x_direction, rotation,
-                    warmup_state):
-        """
-        Called when a Myo armband and an arm is synced.
-        """
-
-    def on_arm_unsync(self, myo, timestamp):
-        """
-        Called when a Myo armband and an arm is unsynced.
-        """
 
     def on_battery_level_received(self, myo, timestamp, level):
         """
@@ -308,7 +262,7 @@ class Listener(libmyo.DeviceListener):
         deltaYaw = yaw - restingYaw
 
         if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw):
-            if curPose == libmyo.Pose.fist: #UP DOWN
+            if curPose == libmyo.Pose.fingers_spread: #UP DOWN
                 inPose = True
 
 

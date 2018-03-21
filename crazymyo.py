@@ -23,16 +23,27 @@ import math
 from math import sin, cos
 
 """
+TIP:
+    WHEN PERFORMING SYNC USING MYO CONNECT
+    MAKE SURE TO KEEP ARM STRAIGHT AND JUST FLICK WRIST OUT
+    IE: WAVE OUT USING JUST YOUR WRIST!
+
+
 Gestures SUPPORTED
 1) If not flying, double tap once to start flying
-2) If flying, double tap once to hover
+2) double tap once to recalibrate
 3) If Flying, double tap twice to land
 4) If flying, a rest pose should trigger hover
-5) Yaw + fist = translate left/RIGHT
-6) yaw + fingers spread = YAW
-7) roll + fist = roll? Do a flip if the angle is over some to be determined later amount
-8) pitch + fist = translate forward or backward depending on the quads orientation
-9) pitch + fingers spread = adjust Altitude
+5) Yaw = translate left/RIGHT
+6) yaw + fist = YAW
+7) pitch = translate forward or backward depending on the quads orientation
+8) pitch + fingers spread = adjust Altitude
+
+
+VIBRATION MEANINGS:
+1) SHORT and short fingers_spread
+2) long and long - FIST
+3) LONG AND SHORT - double tap!
 
 Gestures are sent in the following format:
     (myo_pose, rotation_type, rotation_angle)
@@ -322,14 +333,19 @@ class Listener(libmyo.DeviceListener):
 
             else: #this means we want to land if we get two double taps in a row
                 inPose = False
+                myo.vibrate ('long')
+                myo.vibrate ('short')
                 gesture.add_gesture((LAND,0,0))
                 consecDoubleTaps = 0
 
 
         elif pose == libmyo.Pose.fingers_spread:
-            myo.set_stream_emg(libmyo.StreamEmg.disabled)
-            self.emg_enabled = False
-            self.emg = None
+            myo.vibrate ('short')
+            myo.vibrate ('short')
+        elif pose == libmyo.Pose.fist:
+            myo.vibrate ('long')
+            myo.vibrate ('long')
+
         self.pose = pose
         if pose != libmyo.Pose.rest:
             self.output()
@@ -355,21 +371,19 @@ class Listener(libmyo.DeviceListener):
         deltaYaw = yaw - restingYaw
 
         if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw):
-            if curPose == libmyo.Pose.fist: #UP DOWN
+            if curPose == libmyo.Pose.fingers_spread: #UP DOWN
                 consecDoubleTaps = 0
 
                 if inMotion == False: #if quad is moving - don't add gesture to queue
-                    gesture.add_gesture((FIST,pitch_id,deltaPitch))
+                    gesture.add_gesture((FINGERS_SPREAD,pitch_id,deltaPitch))
+                    print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
-                print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
+
             else: #forward/backward
                 consecDoubleTaps = 0
                 if inMotion == False: #if quad is moving - don't add gesture to queue
                     gesture.add_gesture((NO_POSE,pitch_id, deltaPitch))
-
-                print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
-
-
+                    print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
 
         elif abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch):
@@ -378,34 +392,19 @@ class Listener(libmyo.DeviceListener):
                 inPose = True
                 if inMotion == False: #if quad is moving - don't add gesture to queue
                     gesture.add_gesture((NO_POSE,yaw_id,deltaYaw))
+                    print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
-
-                print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
             elif curPose == libmyo.Pose.fist: #yaw drone
                 consecDoubleTaps = 0
                 inPose = True
                 if inMotion == False: #if quad is moving - don't add gesture to queue
                     gesture.add_gesture((FIST,yaw_id, deltaYaw))
+                    print("YAW DRONE left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
-                print("YAW DRONE left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
+
         else: # just Hover
             gesture.add_gesture((REST,0,0))
-
-
-        #time.sleep(0.5)
-
-
-    def on_accelerometor_data(self, myo, timestamp, acceleration):
-        self.acceleration = acceleration
-        #accelData.append([acceleration[0],acceleration[1], acceleration[2]])
-
-    def on_gyroscope_data(self, myo, timestamp, gyroscope):
-        self.gyroscope = gyroscope
-
-    def on_emg_data(self, myo, timestamp, emg):
-        self.emg = emg
-        #self.output()
 
     def on_unlock(self, myo, timestamp):
         self.locked = False
@@ -561,7 +560,7 @@ class FlightCtrl:
                 inMotion = False
 
 
-        elif g_id[0] == FIST and g_id[1] == pitch_id:
+        elif g_id[0] == FINGERS_SPREAD and g_id[1] == pitch_id:
 
             if g_id[2] > 0:
                 if self.mc._thread.get_height() + d < self.mc.max_height:
