@@ -27,6 +27,8 @@ TIP:
     WHEN PERFORMING SYNC USING MYO CONNECT
     MAKE SURE TO KEEP ARM STRAIGHT AND JUST FLICK WRIST OUT
     IE: WAVE OUT USING JUST YOUR WRIST!
+
+
 Gestures SUPPORTED
 1) If not flying, double tap once to start flying
 2) double tap once to recalibrate
@@ -36,10 +38,13 @@ Gestures SUPPORTED
 6) yaw + fist = YAW
 7) pitch = translate forward or backward depending on the quads orientation
 8) pitch + fingers spread = adjust Altitude
+
+
 VIBRATION MEANINGS:
 1) SHORT and short fingers_spread
 2) long and long - FIST
 3) LONG AND SHORT - double tap!
+
 Gestures are sent in the following format:
     (myo_pose, rotation_type, rotation_angle)
 myo_pose is one of:
@@ -54,6 +59,7 @@ rotation_type is one of
     3) yaw
 rotation_angle is an angle in radians
 For double taps and rests, the last two variables can safely be ignored.
+
 """
 #rotation_type constants
 roll_id = 1
@@ -508,49 +514,49 @@ class FlightCtrl:
             if self.mc._is_flying:
                 print("Hovering...")
                 #mc.stop()
-                #self.resetYawInit()
+                self.resetYawInit()
             else:
                 consecDoubleTaps = 0
                 print("Taking off...")
                 inMotion = True
                 self.mc.take_off()
                 inMotion = False
-                #self.resetYawInit()
-                #threadUpdate = Thread(target = self._updateYaw, args = (self.scf,))
-                #threadUpdate.start()
+                self.resetYawInit()
+                threadUpdate = Thread(target = self._updateYaw, args = (self.scf,))
+                threadUpdate.start()
 
 
         elif g_id[0] == NO_POSE and g_id[1] == yaw_id:
             print("Roll...")
-            #mc.move_distance(0,math.copysign(d, g_id[2]),0)
+            mc.move_distance(0,math.copysign(d, g_id[2]),0)
             if (g_id[2] > 0):
                 #turn left
                 print("turning left")
                 inMotion = True
-                self.mc.move_distance(self.lvSpeed * self.lfCoef[0], self.lvSpeed * self.lfCoef[1], 0)
+                #self.mc.move_distance(self.lvSpeed * self.lfCoef[0], self.lvSpeed * self.lfCoef[1], 0)
                 inMotion = False
             else:
                 #turn right
                 print("turning right")
                 inMotion = True
-                self.mc.move_distance(self.lvSpeed * self.rtCoef[0], self.lvSpeed * self.rtCoef[1], 0)
+                #self.mc.move_distance(self.lvSpeed * self.rtCoef[0], self.lvSpeed * self.rtCoef[1], 0)
                 inMotion = False
 
 
         elif g_id[0] == NO_POSE and g_id[1] == pitch_id:
             print("Pitch...")
-            #mc.move_distance(math.copysign(d, g_id[2]), 0, 0)
+            mc.move_distance(math.copysign(d, g_id[2]), 0, 0)
             if (g_id[2] < 0):
                 #move forward
                 print("moving forward")
                 inMotion = True
-                self.mc.move_distance(self.lvSpeed * self.fwCoef[0], self.lvSpeed * self.fwCoef[1], 0)
+                #self.mc.move_distance(self.lvSpeed * self.fwCoef[0], self.lvSpeed * self.fwCoef[1], 0)
                 inMotion = False
             else:
                 #move backward
                 print("moving backward")
                 inMotion = True
-                self.mc.move_distance(self.lvSpeed * self.bkCoef[0], self.lvSpeed * self.bkCoef[1], 0)
+                #self.mc.move_distance(self.lvSpeed * self.bkCoef[0], self.lvSpeed * self.bkCoef[1], 0)
                 inMotion = False
 
 
@@ -623,8 +629,7 @@ class FlightCtrl:
             print str(e)
             print("Update current yaw failed")
 
-    def 
-    awInit(self):
+    def resetYawInit(self):
         try:
              #set recalibrate initial Yaw value
             with open('SensorMaster.txt','r') as stbFile:
@@ -657,7 +662,7 @@ class FlightCtrl:
     def gesture_ctrl(self, fc, g):
         global gesture
 
-        #self.resetYawInit()
+        self.resetYawInit()
 
         try:
 
