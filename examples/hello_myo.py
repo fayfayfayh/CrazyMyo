@@ -36,6 +36,8 @@ restingPitch = 0  #resting orientation
 restingYaw = 0  #resting orientation
 minRot = 0.785 # must rotate arm at least this much for gesture detection try 35 degs first
 inPose = False #flag to see if a pose is currently active
+consecDoubleTaps = 0 #for landing
+isFlying = False
 
 
 
@@ -221,18 +223,34 @@ class Listener(libmyo.DeviceListener):
 
     def on_pose(self, myo, timestamp, pose):
         global inPose
+        global consecDoubleTaps
+        global isFlying
         if pose == libmyo.Pose.rest:
             inPose = False
 
 
         if pose == libmyo.Pose.double_tap: #double tap detected
+
             myo.set_stream_emg(libmyo.StreamEmg.enabled)
             self.emg_enabled = True
-            if self.pose != libmyo.Pose.double_tap:
-                inPose = False
+
+
+            if consecDoubleTaps < 2:
+                if isFlying == True:
+                    print ("Double tap detected: Recalibration!\n")
+                    inPose = False
+                    consecDoubleTaps = consecDoubleTaps + 1
+                else:
+                    print("Takeoff")
+                    isFlying = True
+
             else: #this means we want to land if we get two double taps in a row
+                consecDoubleTaps = 0
                 inPose = False
+                isFlying = False
                 print("LAND requested - two double taps in a row")
+
+
 
 
 
@@ -250,6 +268,7 @@ class Listener(libmyo.DeviceListener):
         global restingRoll
         global restingPitch
         global inPose
+        global consecDoubleTaps
         self.orientation = orientation
         curPose = self.pose
         lastQuat = orientation #last orientation in quarternion
@@ -263,32 +282,34 @@ class Listener(libmyo.DeviceListener):
 
         if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw):
             if curPose == libmyo.Pose.fingers_spread: #UP DOWN
+                consecDoubleTaps = 0
                 inPose = True
-
-
                 print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
+
+
+
             else: #forward/backward
+                consecDoubleTaps = 0
                 inPose = True
-
-
                 print("Move forward/backward - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
+
+
+
 
 
         elif abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch):
             if curPose != libmyo.Pose.fist:#left right motion
+                consecDoubleTaps = 0
                 inPose = True
-
-
-
-
                 print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
+
+
             elif curPose == libmyo.Pose.fist: #yaw drone
+                consecDoubleTaps = 0
                 inPose = True
-
-
-
                 print("YAW DRONE left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
+
 
 
     def on_accelerometor_data(self, myo, timestamp, acceleration):
