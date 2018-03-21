@@ -582,7 +582,7 @@ class FlightCtrl:
 
         elif g_id[0] == FIST and g_id[1] == yaw_id:
             print ('Yaw...')
-            if g_id[2] < 0:
+            if g_id[2] > 0:
                 inMotion = True
                 self.mc.turn_left(30)
                 inMotion = False
