@@ -528,37 +528,41 @@ class FlightCtrl:
 
         elif g_id[0] == NO_POSE and g_id[1] == yaw_id:
             print("Roll...")
-            mc.move_distance(0,math.copysign(d, g_id[2]),0)
-            if (g_id[2] > 0):
+            inMotion = True
+            self.mc.move_distance(0,math.copysign(d, g_id[2]),0)
+            inMotion = False
+            """if (g_id[2] > 0):
                 #turn left
                 print("turning left")
                 inMotion = True
-                #self.mc.move_distance(self.lvSpeed * self.lfCoef[0], self.lvSpeed * self.lfCoef[1], 0)
+                self.mc.move_distance(self.lvSpeed * self.lfCoef[0], self.lvSpeed * self.lfCoef[1], 0)
                 inMotion = False
             else:
                 #turn right
                 print("turning right")
                 inMotion = True
-                #self.mc.move_distance(self.lvSpeed * self.rtCoef[0], self.lvSpeed * self.rtCoef[1], 0)
+                self.mc.move_distance(self.lvSpeed * self.rtCoef[0], self.lvSpeed * self.rtCoef[1], 0)
                 inMotion = False
-
+            """
 
         elif g_id[0] == NO_POSE and g_id[1] == pitch_id:
             print("Pitch...")
-            mc.move_distance(math.copysign(d, g_id[2]), 0, 0)
-            if (g_id[2] < 0):
+            inMotion = True
+            self.mc.move_distance(-math.copysign(d, g_id[2]), 0, 0)
+            inMotion = False
+            """if (g_id[2] < 0):
                 #move forward
                 print("moving forward")
                 inMotion = True
-                #self.mc.move_distance(self.lvSpeed * self.fwCoef[0], self.lvSpeed * self.fwCoef[1], 0)
+                self.mc.move_distance(self.lvSpeed * self.fwCoef[0], self.lvSpeed * self.fwCoef[1], 0)
                 inMotion = False
             else:
                 #move backward
                 print("moving backward")
                 inMotion = True
-                #self.mc.move_distance(self.lvSpeed * self.bkCoef[0], self.lvSpeed * self.bkCoef[1], 0)
+                self.mc.move_distance(self.lvSpeed * self.bkCoef[0], self.lvSpeed * self.bkCoef[1], 0)
                 inMotion = False
-
+            """
 
         elif g_id[0] == FINGERS_SPREAD and g_id[1] == pitch_id:
 
