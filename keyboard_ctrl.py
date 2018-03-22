@@ -41,7 +41,7 @@ from threading import Thread
 import cflib.crtp
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.positioning.motion_commander import MotionCommander
-from cflib.positioning.commander import Commander
+from cflib.crazyflie.commander import Commander
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation

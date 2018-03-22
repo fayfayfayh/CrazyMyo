@@ -141,7 +141,8 @@ class Comm:
     
 
     def flip_test(self): 
-
+        # Below is attempt to implememnt algorithm found in https://www.research-collection.ethz.ch/bitstream/handle/20.500.11850/151399/eth-165-01.pdf?sequence=1
+        # Currently unknown how the provided values can make physical sense given the parameters of the Crazyflie (or any drone?)
         # U1 = 0.9 * beta_max
         # U2 = 0.5 * (beta_max + beta_min)
         # U3 = beta_min
@@ -158,35 +159,71 @@ class Comm:
 
         # T2 = (theta_d_max - theta_dd1 * T1)    
 
-        # self.mc._cf.close_link()
 
-        print 'Input to start'
+        print 'Enter to take off'
 
         c = raw_input()
           
         self.mc.take_off()
 
-        print 'Input to start'
+        print 'Enter to flip'
 
         c = raw_input()
         print 'Beginning test...'
-        print 'asdf'
-        self.mc._cf.commander.send_setpoint(0,0,0,max_thrust)
-               
+        
+        tic = time.time()
+        
+        while time.time() - tic < 0.35:
+            
+            self.mc._cf.commander.send_setpoint(0,0,0,max_thrust)      
+            time.sleep(0.01)
+        tic = time.time()
+        
+        while time.time() - tic < 0.2: 
+            self.mc._cf.commander.send_setpoint(360*10,0,0,max_thrust)
+            time.sleep(0.01)
 
-        time.sleep(2)
+        tic = time.time()
+        
+        while time.time() - tic < 0.15:
+            self.mc._cf.commander.send_setpoint(-360*10,0,0,max_thrust)
+            time.sleep(0.01)
 
+        
         self.mc._cf.commander.send_setpoint(360*10,0,0,max_thrust)
+        time.sleep(0.01)
+        self.mc._cf.commander.send_setpoint(360*10,0,0,max_thrust)
+        time.sleep(0.01)
+        self.mc._cf.commander.send_setpoint(360*10,0,0,max_thrust)
+        time.sleep(0.01)
+        self.mc._cf.commander.send_setpoint(360*6,0,0,0.7*max_thrust)
+        time.sleep(0.01)
+        
 
-        time.sleep(0.5)
+        tic = time.time()
 
-        # self.mc._cf.commander.send_setpoint(0,0,0,max_thrust*0.5)
+        while time.time() - tic < 0.06:
+            self.mc._cf.commander.send_setpoint(0,0,0,0.6*max_thrust)
+            time.sleep(0.01)
 
-        # time.sleep(1)
+        self.mc._cf.commander.send_setpoint(0,0,0,0)
+        time.sleep(0.01)
+        self.mc._cf.commander.send_setpoint(0,0,0,0)
+        time.sleep(0.01)
+        self.mc._cf.commander.send_setpoint(0,0,0,0)
+        time.sleep(0.01)
+        self.mc._cf.commander.send_setpoint(0,0,0,0)
+        time.sleep(0.01)
 
-        self.mc._cf.commander.send_setpoint(0,0,0,max_thrust)
+        tic = time.time()
+        while time.time() - tic < 0.15:
+            self.mc._set_vel_setpoint(0, 0, 0.2, 0)
+            time.sleep(0.01)
 
-        self.mc.stop()
+        while True:
+            self.mc.stop()
+            time.sleep(0.01)
+
             
 
 if __name__ == '__main__':
@@ -206,11 +243,12 @@ if __name__ == '__main__':
             sys.exit(0)
     
         while True:
-            time.sleep(0.1)
+            time.sleep(0.05)
 
     except KeyboardInterrupt:
         print('\nUser interrupted operation; shutting down...')
                 
         le._cf.commander.send_setpoint(0, 0, 0, 0)
         le._cf.close_link()
+        pygame.quit()
         sys.exit(0)    
