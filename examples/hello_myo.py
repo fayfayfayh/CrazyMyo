@@ -21,8 +21,8 @@
 from __future__ import print_function
 #from scipy import integrate
 
-import myo as libmyo; #libmyo.init()
-libmyo.init('/Users/fayhuang/Desktop/Capstone/sdk/myo.framework')
+import myo as libmyo; libmyo.init()
+#libmyo.init('/Users/fayhuang/Desktop/Capstone/sdk/myo.framework')
 import time
 import sys
 import numpy as np
@@ -112,6 +112,8 @@ class Calibration_Listener(libmyo.DeviceListener):
             restingRoll = math.atan2(2.0*(lastQuat[3]*lastQuat[0] + lastQuat[1]*lastQuat[2]), 1.0 - 2.0*(lastQuat[0]*lastQuat[0] + lastQuat[1] * lastQuat[1]))
             restingPitch = math.asin(max(-1.0, min(1.0, 2.0*(lastQuat[3]*lastQuat[1] - lastQuat[2]*lastQuat[0]))))
             restingYaw = math.atan2(2.0*(lastQuat[3]*lastQuat[2] + lastQuat[0]*lastQuat[1]), 1.0 - 2.0*( lastQuat[1]*lastQuat[1] + lastQuat[2]*lastQuat[2]))
+            if restingYaw < 0: #if angle is negative - in interval (0,-180], change to 360 degree equivalent
+                restingYaw = math.pi*2 + restingYaw
             print("[" + str(restingRoll) + "," + str(restingPitch) + "," + str(restingYaw) +"]\n")
             self.output()
             return False
@@ -277,10 +279,13 @@ class Listener(libmyo.DeviceListener):
         roll = math.atan2(2.0*(lastQuat[3]*lastQuat[0] + lastQuat[1]*lastQuat[2]), 1.0 - 2.0*(lastQuat[0]*lastQuat[0] + lastQuat[1] * lastQuat[1]))
         pitch = math.asin(max(-1.0, min(1.0, 2.0*(lastQuat[3]*lastQuat[1] - lastQuat[2]*lastQuat[0]))))
         yaw = math.atan2(2.0*(lastQuat[3]*lastQuat[2] + lastQuat[0]*lastQuat[1]), 1.0 - 2.0*( lastQuat[1]*lastQuat[1] + lastQuat[2]*lastQuat[2]))
-
+        if yaw < 0: #if angle is negative - in interval (0,-180], change to 360 degree equivalent
+            yaw = math.pi*2 + yaw
         deltaRoll = roll - restingRoll
         deltaPitch = pitch - restingPitch
         deltaYaw = yaw - restingYaw
+        if abs(deltaYaw) > math.pi/2: #temporary failsafe - if we get more than 90 degrees don't make a move
+            deltaYaw = 0
 
         if abs(deltaPitch) >= minRot and abs(deltaPitch) > abs(deltaYaw):
             if curPose == libmyo.Pose.fingers_spread: #UP DOWN
