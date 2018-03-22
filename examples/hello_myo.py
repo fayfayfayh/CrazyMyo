@@ -279,9 +279,9 @@ class Listener(libmyo.DeviceListener):
         roll = math.atan2(2.0*(lastQuat[3]*lastQuat[0] + lastQuat[1]*lastQuat[2]), 1.0 - 2.0*(lastQuat[0]*lastQuat[0] + lastQuat[1] * lastQuat[1]))
         pitch = math.asin(max(-1.0, min(1.0, 2.0*(lastQuat[3]*lastQuat[1] - lastQuat[2]*lastQuat[0]))))
         yaw = math.atan2(2.0*(lastQuat[3]*lastQuat[2] + lastQuat[0]*lastQuat[1]), 1.0 - 2.0*( lastQuat[1]*lastQuat[1] + lastQuat[2]*lastQuat[2]))
-        if yaw < 0: #if angle is negative - in interval (0,-180], change to 360 degree equivalent
+        if yaw < 0 and not( restingYaw <= math.pi/2 and restingYaw >= 0): #if angle is negative - in interval (0,-180], change to 360 degree equivalent IF resting NOT in [0-90] interval
             yaw = math.pi*2 + yaw
-        elif restingYaw >= math.pi*1.5: # else if yaw is positive AND restingPosition is greater than 270 degrees
+        elif restingYaw >= math.pi*1.5 and yaw >= 0: # else if yaw is positive AND restingPosition is greater than 270 degrees
             yaw = math.pi*2 + yaw
         #can refactor above as single OR statement do later
 
