@@ -238,21 +238,21 @@ class Listener(libmyo.DeviceListener):
             self.emg_enabled = True
 
 
-            if consecDoubleTaps < 2:
-                if isFlying == True:
-                    print ("Double tap detected: Recalibration!\n")
-                    inPose = False
-                    consecDoubleTaps = consecDoubleTaps + 1
-                else:
-                    print("Takeoff")
-                    isFlying = True
-                    consecDoubleTaps = consecDoubleTaps + 1
+            #if consecDoubleTaps < 2:
+            if isFlying == False:
+            #     print ("Double tap detected: Recalibration!\n")
+            #     inPose = False
+            #     consecDoubleTaps = consecDoubleTaps + 1
+            # else:
+                print("Takeoff")
+                isFlying = True
+                consecDoubleTaps = consecDoubleTaps + 1
 
-            else: #this means we want to land if we get two double taps in a row
+            else: #this means we want to land if we get a double tap
                 consecDoubleTaps = 0
                 inPose = False
                 isFlying = False
-                print("LAND requested - two double taps in a row")
+                print("LAND requested")
 
 
 
@@ -262,6 +262,9 @@ class Listener(libmyo.DeviceListener):
             myo.set_stream_emg(libmyo.StreamEmg.disabled)
             self.emg_enabled = False
             self.emg = None
+
+        elif pose == libmyo.Pose.fist:
+                print("RECAL\n")
         self.pose = pose
 
         self.output()
@@ -283,7 +286,7 @@ class Listener(libmyo.DeviceListener):
             yaw = math.pi*2 + yaw
         elif restingYaw >= math.pi*1.5 and yaw >= 0: # else if yaw is positive AND restingPosition is greater than 270 degrees
             yaw = math.pi*2 + yaw
-        
+
 
         deltaRoll = roll - restingRoll
         deltaPitch = pitch - restingPitch
@@ -309,14 +312,14 @@ class Listener(libmyo.DeviceListener):
 
 
         elif abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch):
-            if curPose != libmyo.Pose.fist:#left right motion
+            if curPose != libmyo.Pose.fingers_spread:#left right motion
                 consecDoubleTaps = 0
                 inPose = True
                 print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
 
 
-            elif curPose == libmyo.Pose.fist: #yaw drone
+            elif curPose == libmyo.Pose.fingers_spread: #yaw drone
                 consecDoubleTaps = 0
                 inPose = True
                 print("YAW DRONE left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
