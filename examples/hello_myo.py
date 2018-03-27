@@ -283,7 +283,7 @@ class Listener(libmyo.DeviceListener):
             yaw = math.pi*2 + yaw
         elif restingYaw >= math.pi*1.5 and yaw >= 0: # else if yaw is positive AND restingPosition is greater than 270 degrees
             yaw = math.pi*2 + yaw
-        #can refactor above as single OR statement do later
+        
 
         deltaRoll = roll - restingRoll
         deltaPitch = pitch - restingPitch
