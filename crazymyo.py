@@ -31,17 +31,17 @@ TIP:
 
 Gestures SUPPORTED
 1) If not flying, double tap once to start flying
-2) double tap once to recalibrate
-3) If Flying, double tap twice to land
+2) FIST to recalibrate
+3) If Flying, double tap to land
 4) If flying, a rest pose should trigger hover
 5) Yaw = translate left/RIGHT
-6) yaw + fist = YAW
+6) yaw + fingers_spread = YAW
 7) pitch = translate forward or backward depending on the quads orientation
 8) pitch + fingers spread = adjust Altitude
 
 
 VIBRATION MEANINGS:
-1) SHORT and short fingers_spread
+1) SHORT, short and short fingers_spread
 2) long and long - FIST
 3) LONG AND SHORT - double tap!
 
@@ -52,7 +52,7 @@ myo_pose is one of:
     2) FINGERS_SPREAD
     3) REST
     4) FIST
-    5) LAND (to accommodate landing)
+
 rotation_type is one of
     1) roll
     2) pitch
@@ -317,36 +317,21 @@ class Listener(libmyo.DeviceListener):
             consecDoubleTaps = consecDoubleTaps + 1
             myo.set_stream_emg(libmyo.StreamEmg.enabled)
             self.emg_enabled = True
-            if consecDoubleTaps < 2:
-                print("Double tap detected: Recalibration!\n")
-                inPose = False
 
-                #lastQuat = self.orientation #last orientation in quarternion
-                #restingRoll = math.atan2(2.0*(lastQuat[3]*lastQuat[0] + lastQuat[1]*lastQuat[2]), 1.0 - 2.0*(lastQuat[0]*lastQuat[0] + lastQuat[1] * lastQuat[1]))
-                #restingPitch = math.asin(max(-1.0, min(1.0, 2.0*(lastQuat[3]*lastQuat[1] - lastQuat[2]*lastQuat[0]))))
-                #restingYaw = math.atan2(2.0*(lastQuat[3]*lastQuat[2] + lastQuat[0]*lastQuat[1]), 1.0 - 2.0*( lastQuat[1]*lastQuat[1] + lastQuat[2]*lastQuat[2]))
-                #print("Detected default orientation [" + str(restingRoll) + "," + str(restingPitch) + "," + str(restingYaw) +"]\n")
-                #self.output()
-                myo.vibrate ('long')
-                myo.vibrate ('short')
-                gesture.add_gesture((DOUBLE_TAP,0,0))
-
-
-
-            else: #this means we want to land if we get two double taps in a row
-                inPose = False
-                myo.vibrate ('long')
-                myo.vibrate ('short')
-                gesture.add_gesture((LAND,0,0))
-                consecDoubleTaps = 0
+            myo.vibrate ('long')
+            myo.vibrate ('short')
+            gesture.add_gesture((DOUBLE_TAP,0,0)) #eithet take off or land
 
 
         elif pose == libmyo.Pose.fingers_spread:
             myo.vibrate ('short')
             myo.vibrate ('short')
-        elif pose == libmyo.Pose.fist:
+            myo.vibrate ('short')
+        elif pose == libmyo.Pose.fist: #recali bration
             myo.vibrate ('long')
             myo.vibrate ('long')
+            gesture.add_gesture((FIST,0,0))
+            print("FIST detected: Recalibration!\n")
 
         self.pose = pose
         if pose != libmyo.Pose.rest:
@@ -395,7 +380,7 @@ class Listener(libmyo.DeviceListener):
 
 
         elif abs(deltaYaw) >= minRot and abs(deltaYaw) > abs(deltaPitch):
-            if curPose != libmyo.Pose.fist:#left right motion
+            if curPose != libmyo.Pose.fingers_spread:#left right motion
                 consecDoubleTaps = 0
                 inPose = True
                 if inMotion == False: #if quad is moving - don't add gesture to queue
@@ -403,11 +388,11 @@ class Listener(libmyo.DeviceListener):
                     print("left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
 
-            elif curPose == libmyo.Pose.fist: #yaw drone
+            elif curPose == libmyo.Pose.fingers_spread: #yaw drone
                 consecDoubleTaps = 0
                 inPose = True
                 if inMotion == False: #if quad is moving - don't add gesture to queue
-                    gesture.add_gesture((FIST,yaw_id, deltaYaw))
+                    gesture.add_gesture((FINGERS_SPREAD,yaw_id, deltaYaw))
                     print("YAW DRONE left/right - Yaw angle: " + str(math.degrees(deltaYaw))+"\n")
 
 
@@ -519,10 +504,13 @@ class FlightCtrl:
         d = 0.3
 
         if g_id[0] == DOUBLE_TAP:
-            if self.mc._is_flying:
-                print("Hovering...")
+            if self.mc._is_flying: #land in this case
+                print("Landing...")
+                inMotion = True
+                self.mc.land()
+                inMotion = False
                 #mc.stop()
-                self.resetYawInit()
+                #self.resetYawInit() #recal
             else:
                 consecDoubleTaps = 0
                 print("Taking off...")
@@ -588,7 +576,7 @@ class FlightCtrl:
                 else:
                     print("Max. height %.2fm reached: requested height: %.2f") % (self.mc.max_height, self.mc._thread.get_height() + d)
 
-        elif g_id[0] == FIST and g_id[1] == yaw_id:
+        elif g_id[0] == FINGERS_SPREAD and g_id[1] == yaw_id:
             print ('Yaw...')
             if g_id[2] > 0:
                 inMotion = True
@@ -599,7 +587,10 @@ class FlightCtrl:
                 self.mc.turn_right(30)
                 inMotion = False
 
-        elif g_id[0] == LAND:
+        elif g_id[0] == FIST:
+            self.resetYawInit() #recal
+
+        elif g_id[0] == LAND: #deprecated TODO TAKE THIS OUT
             print("Landing...")
             inMotion = True
             self.mc.land()
