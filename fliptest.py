@@ -47,6 +47,7 @@ class Comm:
 
         self._cf = Crazyflie()
 
+
         self.mc = MotionCommander(self._cf, default_height=1.05)
 
         self._cf.connected.add_callback(self._connected)
@@ -142,7 +143,7 @@ class Comm:
 
     def flip_test(self): 
         # Below is attempt to implememnt algorithm found in https://www.research-collection.ethz.ch/bitstream/handle/20.500.11850/151399/eth-165-01.pdf?sequence=1
-        # Currently unknown how the provided values can make physical sense given the parameters of the Crazyflie (or any drone?)
+        # Currently unknown how the provided initial values can make physical sense given the parameters of the Crazyflie (or any drone?)
         # U1 = 0.9 * beta_max
         # U2 = 0.5 * (beta_max + beta_min)
         # U3 = beta_min
@@ -195,13 +196,8 @@ class Comm:
 
         # Accelerate up
         tic = time.time()
-        while time.time() - tic < 0.3:
+        while time.time() - tic < 0.85:
             self.mc._cf.commander.send_setpoint(0,0,0,max_thrust)
-            time.sleep(0.01)
-
-        tic = time.time()
-        while time.time() - tic < 0.2:
-            self.mc._set_vel_setpoint(0, 0, 0.2, 0)
             time.sleep(0.01)
 
         while True:

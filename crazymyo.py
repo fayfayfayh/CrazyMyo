@@ -756,7 +756,7 @@ def main():
 
     except Exception, e:
         print(str(e))
-        print('\nShutting down... (main)')
+        print('\nShutting down...')
 
         scf.close_link()
         sys.exit(0)
