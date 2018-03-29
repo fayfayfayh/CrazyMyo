@@ -30,9 +30,9 @@ TIP:
 
 
 Gestures SUPPORTED
-1) If not flying, double tap once to start flying
-2) FIST to recalibrate
-3) If Flying, double tap to land
+1) If not flying, FIST + PITCH UP TO TAKEOFF
+2) Double tap to recalibrate
+3) If Flying, FIST + PITCH DOWN TO LAND
 4) If flying, a rest pose should trigger hover
 5) Yaw = translate left/RIGHT
 6) yaw + fingers_spread = YAW
@@ -153,86 +153,29 @@ class Calibration_Listener(libmyo.DeviceListener):
             myo.set_stream_emg(libmyo.StreamEmg.disabled)
             self.emg_enabled = False
             self.emg = None
-        #if pose == libmyo.Pose.double_tap
         self.pose = pose
-        
+
         self.output()
 
 
     def on_orientation_data(self, myo, timestamp, orientation):
         self.orientation = orientation
-        #self.output()
 
     def on_accelerometor_data(self, myo, timestamp, acceleration):
         self.acceleration = acceleration
-        #accelData.append([acceleration[0],acceleration[1], acceleration[2]])
-
-
 
     def on_gyroscope_data(self, myo, timestamp, gyroscope):
         self.gyroscope = gyroscope
 
     def on_emg_data(self, myo, timestamp, emg):
         self.emg = emg
-        #self.output()
 
     def on_unlock(self, myo, timestamp):
         self.locked = False
-        #self.output()
 
     def on_lock(self, myo, timestamp):
         self.locked = True
-        #self.output()
 
-    def on_event(self, kind, event):
-        """
-        Called before any of the event callbacks.
-        """
-
-    def on_event_finished(self, kind, event):
-        """
-        Called after the respective event callbacks have been
-        invoked. This method is *always* triggered, even if one of
-        the callbacks requested the stop of the Hub.
-        """
-
-    def on_pair(self, myo, timestamp, firmware_version):
-        """
-        Called when a Myo armband is paired.
-        """
-
-    def on_unpair(self, myo, timestamp):
-        """
-        Called when a Myo armband is unpaired.
-        """
-        #land gracefully
-
-    def on_disconnect(self, myo, timestamp):
-        """
-        Called when a Myo is disconnected.
-        """
-        #land gracefully
-
-    def on_arm_sync(self, myo, timestamp, arm, x_direction, rotation,
-                    warmup_state):
-        """
-        Called when a Myo armband and an arm is synced.
-        """
-
-    def on_arm_unsync(self, myo, timestamp):
-        """
-        Called when a Myo armband and an arm is unsynced.
-        """
-
-    def on_battery_level_received(self, myo, timestamp, level):
-        """
-        Called when the requested battery level received.
-        """
-
-    def on_warmup_completed(self, myo, timestamp, warmup_result):
-        """
-        Called when the warmup completed.
-        """
 
 
 #MAIN FLIGHT CONTROL MYO EVENT LISTENER
@@ -293,7 +236,8 @@ class Listener(libmyo.DeviceListener):
 
             myo.vibrate ('long')
             myo.vibrate ('short')
-            gesture.add_gesture((DOUBLE_TAP,0,0)) #either take off or land
+            print("double tap detected: Drone Yaw Recalibration!\n")
+            gesture.add_gesture((DOUBLE_TAP,0,0)) #recal
 
 
         elif pose == libmyo.Pose.fingers_spread:
@@ -303,8 +247,8 @@ class Listener(libmyo.DeviceListener):
         elif pose == libmyo.Pose.fist: #recali bration
             myo.vibrate ('long')
             myo.vibrate ('long')
-            gesture.add_gesture((FIST,0,0))
-            print("FIST detected: Recalibration!\n")
+            #gesture.add_gesture((FIST,0,0))
+            #print("FIST detected: Recalibration!\n")
 
         self.pose = pose
         if pose != libmyo.Pose.rest:
@@ -344,6 +288,10 @@ class Listener(libmyo.DeviceListener):
                     gesture.add_gesture((FINGERS_SPREAD,pitch_id,deltaPitch))
                     print("Altitude change - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
+            elif curPose == libmyo.Pose.fist: #TAKEOFF AND LAND
+                if inMotion == False: #if quad is moving - don't add gesture to queue
+                    gesture.add_gesture((FIST,pitch_id,deltaPitch))
+                    #print("Altitude c - Pitch angle: " + str(math.degrees(deltaPitch))+"\n")
 
             else: #forward/backward
                 consecDoubleTaps = 0
@@ -380,53 +328,7 @@ class Listener(libmyo.DeviceListener):
         self.locked = True
         #self.output()
 
-    def on_event(self, kind, event):
-        """
-        Called before any of the event callbacks.
-        """
 
-    def on_event_finished(self, kind, event):
-        """
-        Called after the respective event callbacks have been
-        invoked. This method is *always* triggered, even if one of
-        the callbacks requested the stop of the Hub.
-        """
-
-    def on_pair(self, myo, timestamp, firmware_version):
-        """
-        Called when a Myo armband is paired.
-        """
-
-    def on_unpair(self, myo, timestamp):
-        """
-        Called when a Myo armband is unpaired.
-        """
-
-    def on_disconnect(self, myo, timestamp):
-        """
-        Called when a Myo is disconnected.
-        """
-
-    def on_arm_sync(self, myo, timestamp, arm, x_direction, rotation,
-                    warmup_state):
-        """
-        Called when a Myo armband and an arm is synced.
-        """
-
-    def on_arm_unsync(self, myo, timestamp):
-        """
-        Called when a Myo armband and an arm is unsynced.
-        """
-
-    def on_battery_level_received(self, myo, timestamp, level):
-        """
-        Called when the requested battery level received.
-        """
-
-    def on_warmup_completed(self, myo, timestamp, warmup_result):
-        """
-        Called when the warmup completed.
-        """
 
 #Get resting position orientation
 def calibrate (hub):
@@ -476,22 +378,8 @@ class FlightCtrl:
 
         d = 0.3
 
-        if g_id[0] == DOUBLE_TAP:
-            if self.mc._is_flying: #land in this case
-                print("Landing...")
-                inMotion = True
-                self.mc.land()
-                inMotion = False
-                #self.resetYawInit() #recal
-            else:
-                consecDoubleTaps = 0
-                print("Taking off...")
-                inMotion = True
-                self.mc.take_off()
-                inMotion = False
-                self.resetYawInit()
-                threadUpdate = Thread(target = self._updateYaw, args = (self.scf,))
-                threadUpdate.start()
+        if g_id[0] == DOUBLE_TAP: #RECAL
+            self.resetYawInit()
 
 
         elif g_id[0] == NO_POSE and g_id[1] == yaw_id:
@@ -511,7 +399,7 @@ class FlightCtrl:
 
         elif g_id[0] == NO_POSE and g_id[1] == pitch_id:
             print("Pitch...")
-            
+
             if (g_id[2] < 0):
                 print("moving forward")
                 inMotion = True
@@ -555,8 +443,23 @@ class FlightCtrl:
                 self.mc.turn_right(30)
                 inMotion = False
 
-        elif g_id[0] == FIST:
-            self.resetYawInit() #recal
+        elif g_id[0] == FIST and g_id[1] == pitch_id:
+
+                if self.mc._is_flying and g_id[2] < 0: #land in this case
+                    print("Landing...")
+                    inMotion = True
+                    self.mc.land()
+                    inMotion = False
+
+                elif self.mc._is_flying == False and g_id[2] > 0: #takeoff
+                    consecDoubleTaps = 0
+                    print("Taking off...")
+                    inMotion = True
+                    self.mc.take_off()
+                    inMotion = False
+                    self.resetYawInit()
+                    threadUpdate = Thread(target = self._updateYaw, args = (self.scf,))
+                    threadUpdate.start()
 
         elif g_id[0] == LAND: #deprecated TODO TAKE THIS OUT
             print("Landing...")
@@ -695,7 +598,7 @@ def main():
 
         Thread(target = fc.gesture_ctrl, args = (fc, gesture)).start()
         Thread(target = m.gesture_detection, args = (gesture,)).start()
-        
+
         prev_t = 0
         while True:
             t = int(time.time())
