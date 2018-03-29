@@ -47,7 +47,7 @@ class Comm:
 
         self._cf = Crazyflie()
 
-        self.mc = MotionCommander(self._cf, default_height=0.8)
+        self.mc = MotionCommander(self._cf, default_height=1.05)
 
         self._cf.connected.add_callback(self._connected)
         self._cf.disconnected.add_callback(self._disconnected)
@@ -171,52 +171,36 @@ class Comm:
         c = raw_input()
         print 'Beginning test...'
         
-        tic = time.time()
-        
-        while time.time() - tic < 0.35:
+        # Accelerate up
+        tic = time.time()        
+        while time.time() - tic < 0.1:
             
             self.mc._cf.commander.send_setpoint(0,0,0,max_thrust)      
             time.sleep(0.01)
-        tic = time.time()
-        
-        while time.time() - tic < 0.2: 
-            self.mc._cf.commander.send_setpoint(360*10,0,0,max_thrust)
+
+        # Max differential thrust
+        tic = time.time()        
+        while time.time() - tic < 0.13: 
+            self.mc._cf.commander.send_setpoint(360*9,0,0,max_thrust)
             time.sleep(0.01)
 
-        tic = time.time()
-        
+        # Coast
+        time.sleep(0.01)
+
+        # Stop rotate
+        tic = time.time()        
         while time.time() - tic < 0.15:
-            self.mc._cf.commander.send_setpoint(-360*10,0,0,max_thrust)
+            self.mc._cf.commander.send_setpoint(-360*9,0,0,max_thrust)
+            time.sleep(0.01)    
+
+        # Accelerate up
+        tic = time.time()
+        while time.time() - tic < 0.3:
+            self.mc._cf.commander.send_setpoint(0,0,0,max_thrust)
             time.sleep(0.01)
 
-        
-        self.mc._cf.commander.send_setpoint(360*10,0,0,max_thrust)
-        time.sleep(0.01)
-        self.mc._cf.commander.send_setpoint(360*10,0,0,max_thrust)
-        time.sleep(0.01)
-        self.mc._cf.commander.send_setpoint(360*10,0,0,max_thrust)
-        time.sleep(0.01)
-        self.mc._cf.commander.send_setpoint(360*6,0,0,0.7*max_thrust)
-        time.sleep(0.01)
-        
-
         tic = time.time()
-
-        while time.time() - tic < 0.06:
-            self.mc._cf.commander.send_setpoint(0,0,0,0.6*max_thrust)
-            time.sleep(0.01)
-
-        self.mc._cf.commander.send_setpoint(0,0,0,0)
-        time.sleep(0.01)
-        self.mc._cf.commander.send_setpoint(0,0,0,0)
-        time.sleep(0.01)
-        self.mc._cf.commander.send_setpoint(0,0,0,0)
-        time.sleep(0.01)
-        self.mc._cf.commander.send_setpoint(0,0,0,0)
-        time.sleep(0.01)
-
-        tic = time.time()
-        while time.time() - tic < 0.15:
+        while time.time() - tic < 0.2:
             self.mc._set_vel_setpoint(0, 0, 0.2, 0)
             time.sleep(0.01)
 
@@ -250,5 +234,4 @@ if __name__ == '__main__':
                 
         le._cf.commander.send_setpoint(0, 0, 0, 0)
         le._cf.close_link()
-        pygame.quit()
         sys.exit(0)    
