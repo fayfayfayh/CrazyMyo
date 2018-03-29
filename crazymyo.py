@@ -85,7 +85,7 @@ consecDoubleTaps = 0 #for landing
 
 
 WARN_VBAT = 3.3
-MIN_VBAT = 3.15
+MIN_VBAT = 3.25
 
 #Myo event listener- specialized for calibration type behaviour
 class Calibration_Listener(libmyo.DeviceListener):
@@ -109,32 +109,14 @@ class Calibration_Listener(libmyo.DeviceListener):
         self.last_time = 0
 
     def output(self):
-        # TODO: Should clean up these comments
         ctime = time.time()
         if (ctime - self.last_time) < self.interval:
             return
         self.last_time = ctime
 
         parts = []
-        # if self.orientation:
-        #     for comp in self.orientation:
-        #         parts.append(str(comp).ljust(15))
-
-
-
-        # if self.acceleration:
-        #     for comp in self.acceleration:
-        #         parts.append(str(comp).ljust(15))
 
         parts.append(str(self.pose).ljust(10))
-        # parts.append('E' if self.emg_enabled else ' ')
-        # parts.append('L' if self.locked else ' ')
-        # parts.append(self.rssi or 'NORSSI')
-        # if self.emg:
-        #     for comp in self.emg:
-        #         parts.append(str(comp).ljust(5))
-        #print('\r\n' + ''.join('[{0}]'.format(p) for p in parts), end='')
-        #sys.stdout.flush()
 
     def on_connect(self, myo, timestamp, firmware_version):
         myo.vibrate('short')
@@ -727,16 +709,18 @@ def main():
 
         Thread(target = fc.gesture_ctrl, args = (fc, gesture)).start()
         Thread(target = m.gesture_detection, args = (gesture,)).start()
-
+        
+        prev_t = 0
         while True:
             t = int(time.time())
             if scf.vbat is not None:
-                if t % 20 == 0: # print every 20 seconds
+                if t % 20 == 0 and t != prev_t: # print every 20 seconds
                     print "Battery voltage: %.2fV" % (scf.vbat,)
+                    prev_t = t
 
-                if t % 5 == 0 and scf.vbat > MIN_VBAT and scf.vbat < WARN_VBAT:
+                if t % 5 == 0 and t != prev_t and scf.vbat > MIN_VBAT and scf.vbat < WARN_VBAT:
                     print "WARN: Battery voltage: %.2fV. Landing soon..." % (scf.vbat,)
-                    # would be nice to have some sort of vibration indicator here and below
+                    prev_t = t
 
                 if t % 5 == 0 and scf.vbat < MIN_VBAT:
                     print "Battery voltage %.2f too low; landing..." % (scf.vbat)

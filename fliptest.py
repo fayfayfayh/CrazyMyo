@@ -181,8 +181,8 @@ class Comm:
 
         # Max differential thrust
         tic = time.time()        
-        while time.time() - tic < 0.13: 
-            self.mc._cf.commander.send_setpoint(360*9,0,0,max_thrust)
+        while time.time() - tic < 0.14: 
+            self.mc._cf.commander.send_setpoint(360*8,0,0,max_thrust)
             time.sleep(0.01)
 
         # Coast
@@ -191,12 +191,12 @@ class Comm:
         # Stop rotate
         tic = time.time()        
         while time.time() - tic < 0.15:
-            self.mc._cf.commander.send_setpoint(-360*9,0,0,max_thrust)
+            self.mc._cf.commander.send_setpoint(-360*8,0,0,max_thrust)
             time.sleep(0.01)    
 
         # Accelerate up
         tic = time.time()
-        while time.time() - tic < 0.85:
+        while time.time() - tic < 0.9:
             self.mc._cf.commander.send_setpoint(0,0,0,max_thrust)
             time.sleep(0.01)
 

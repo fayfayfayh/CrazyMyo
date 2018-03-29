@@ -457,20 +457,12 @@ class _SetPointThread(Thread):
         """
         return self._hover_setpoint[self.ABS_Z_INDEX]
 
-    def flip(self, tmp, roll, pitch, yaw, thrust):
-
-        # self._cf.commander.send_setpoint(roll, pitch, yaw, thrust)
-
-        pass
-
     def run(self):
         while True:
             try:
                 event = self._queue.get(block=True, timeout=self.update_period)
                 if event == self.TERMINATE_EVENT:
                     return
-                # elif event[0] == self.FLIP:
-                #     self.flip(*event)
 
                 self._new_setpoint(*event)
             except Empty:
