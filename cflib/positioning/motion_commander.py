@@ -420,7 +420,6 @@ class _SetPointThread(Thread):
     TERMINATE_EVENT = 'terminate'
     UPDATE_PERIOD = 0.2
     ABS_Z_INDEX = 3
-    FLIP = 'flip'
 
     def __init__(self, cf, update_period=UPDATE_PERIOD):
         Thread.__init__(self)

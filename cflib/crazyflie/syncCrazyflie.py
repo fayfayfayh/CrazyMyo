@@ -96,8 +96,6 @@ class SyncCrazyflie:
         #Open threads for recording sensor data
         Thread(target = self._getStabilizer).start()
         Thread(target = self._getVbat).start()
-        #Thread(target = self._getAccelerometer).start()
-        #Thread(target = self._getGyroscope).start()
 
     def _connection_failed(self, link_uri, msg):
         """Callback when connection initial connection fails (i.e no Crazyflie
@@ -111,7 +109,7 @@ class SyncCrazyflie:
         self._is_link_open = False
 
 
-    """all definition after this point is for status monitor"""
+    """All definitions after this point are for the status monitor"""
 
     def _vbat_log_data(self, timestamp, _vbat, logconf):
         self.vbat = _vbat['pm.vbat']
@@ -128,9 +126,7 @@ class SyncCrazyflie:
     def _stab_log_data(self, timestamp, data, logconf):
         """Callback froma the log API when data arrives"""
         """print('[%d][%s]: %s' % (timestamp, logconf.name, data))"""
-        #with open('StabilizerData.txt', 'a') as stabilizerData:
-            #stabilizerData.write('[%d][%s]: %s' % (timestamp, logconf.name, data))
-            #stabilizerData.write('\n')
+
         with open('SensorMaster.txt', 'a') as sensorMaster:
             sensorMaster.write('%d,%.2f,%.2f,%.2f' %(timestamp, data['stabilizer.roll'], data['stabilizer.yaw'], data['stabilizer.pitch']))
             sensorMaster.write('\n')
@@ -150,6 +146,7 @@ class SyncCrazyflie:
 
         try:
             self.cf.log.add_config(self._lg_vbat)
+            
             # This callback will receive the data
             self._lg_vbat.data_received_cb.add_callback(self._vbat_log_data)
 
@@ -163,7 +160,7 @@ class SyncCrazyflie:
             print('Could not add battery log config, bad configuration.')
 
     def _getStabilizer(self):
-         # The definition of the logconfig can be made before connecting
+        # The definition of the logconfig can be made before connecting
         self._lg_stab = LogConfig(name='Stabilizer', period_in_ms=10)
         self._lg_stab.add_variable('stabilizer.roll', 'float')
         self._lg_stab.add_variable('stabilizer.pitch', 'float')
@@ -171,6 +168,7 @@ class SyncCrazyflie:
         # Adding the configuration cannot be done until a Crazyflie is
         # connected, since we need to check that the variables we
         # would like to log are in the TOC.
+
         try:
             self.cf.log.add_config(self._lg_stab)
             # This callback will receive the data

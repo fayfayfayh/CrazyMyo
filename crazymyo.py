@@ -155,13 +155,7 @@ class Calibration_Listener(libmyo.DeviceListener):
             self.emg = None
         #if pose == libmyo.Pose.double_tap
         self.pose = pose
-        #self.pose =
-        #if the pose is fingers spread, then turn on flag for fingers fingers_spread
-        #if pose is fist turn on flag for
-        #cancel a pose and hover with double_tap
-        #if pose is
-        #If pose is rest then hover
-
+        
         self.output()
 
 
@@ -264,7 +258,6 @@ class Listener(libmyo.DeviceListener):
 
 
     def output(self):
-        # TODO: should clean up these comments
         ctime = time.time()
         if (ctime - self.last_time) < self.interval:
             return
@@ -273,8 +266,6 @@ class Listener(libmyo.DeviceListener):
         parts = []
         parts.append(str(self.pose).ljust(10))
 
-        #print('\r\n' + ''.join('[{0}]'.format(p) for p in parts), end='')
-        #sys.stdout.flush()
 
     def on_connect(self, myo, timestamp, firmware_version):
         myo.vibrate('short')
@@ -295,14 +286,14 @@ class Listener(libmyo.DeviceListener):
             inPose = False
             gesture.add_gesture((REST,0,0))
 
-        if pose == libmyo.Pose.double_tap: #double tap detected
+        if pose == libmyo.Pose.double_tap: # double tap detected
             consecDoubleTaps = consecDoubleTaps + 1
             myo.set_stream_emg(libmyo.StreamEmg.enabled)
             self.emg_enabled = True
 
             myo.vibrate ('long')
             myo.vibrate ('short')
-            gesture.add_gesture((DOUBLE_TAP,0,0)) #eithet take off or land
+            gesture.add_gesture((DOUBLE_TAP,0,0)) #either take off or land
 
 
         elif pose == libmyo.Pose.fingers_spread:
@@ -491,7 +482,6 @@ class FlightCtrl:
                 inMotion = True
                 self.mc.land()
                 inMotion = False
-                #mc.stop()
                 #self.resetYawInit() #recal
             else:
                 consecDoubleTaps = 0
@@ -506,15 +496,13 @@ class FlightCtrl:
 
         elif g_id[0] == NO_POSE and g_id[1] == yaw_id:
             print("Roll...")
-            #mc.move_distance(0,math.copysign(d, g_id[2]),0)
+
             if (g_id[2] > 0):
-                #turn left
                 print("turning left")
                 inMotion = True
                 self.mc.move_distance(self.lvSpeed * self.lfCoef[0], self.lvSpeed * self.lfCoef[1], 0)
                 inMotion = False
             else:
-                #turn right
                 print("turning right")
                 inMotion = True
                 self.mc.move_distance(self.lvSpeed * self.rtCoef[0], self.lvSpeed * self.rtCoef[1], 0)
@@ -523,15 +511,13 @@ class FlightCtrl:
 
         elif g_id[0] == NO_POSE and g_id[1] == pitch_id:
             print("Pitch...")
-            #mc.move_distance(math.copysign(d, g_id[2]), 0, 0)
+            
             if (g_id[2] < 0):
-                #move forward
                 print("moving forward")
                 inMotion = True
                 self.mc.move_distance(self.lvSpeed * self.fwCoef[0], self.lvSpeed * self.fwCoef[1], 0)
                 inMotion = False
             else:
-                #move backward
                 print("moving backward")
                 inMotion = True
                 self.mc.move_distance(self.lvSpeed * self.bkCoef[0], self.lvSpeed * self.bkCoef[1], 0)
@@ -579,7 +565,7 @@ class FlightCtrl:
             inMotion = False
 
         else: #rest behaviour
-            if self.mc._is_flying:
+            if self.mc._is_flying: # If we're not flying it won't do anything, so can ignore that case
                 inMotion = True
                 self.mc.stop()
                 inMotion = False
