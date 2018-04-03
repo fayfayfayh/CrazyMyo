@@ -422,6 +422,7 @@ class _SetPointThread(Thread):
     ABS_Z_INDEX = 3
 
     def __init__(self, cf, update_period=UPDATE_PERIOD):
+        print 'Setpoint thread running'
         Thread.__init__(self)
         self.update_period = update_period
 

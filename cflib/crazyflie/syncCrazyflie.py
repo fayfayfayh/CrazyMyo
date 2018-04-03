@@ -61,6 +61,11 @@ class SyncCrazyflie:
         self.cf.connection_failed.add_callback(self._connection_failed)
         self.cf.disconnected.add_callback(self._disconnected)
 
+        self.curRoll = 0
+        self.curPitch =0
+        self.curYaw = 0
+
+
     def open_link(self):
         if (self.is_link_open()):
             raise Exception('Link already open')
@@ -113,7 +118,7 @@ class SyncCrazyflie:
 
     def _vbat_log_data(self, timestamp, _vbat, logconf):
         self.vbat = _vbat['pm.vbat']
-        
+
 
     def _vbat_log_error(self, logconf, msg):
         """Callback from the log API when an error occurs"""
@@ -126,10 +131,16 @@ class SyncCrazyflie:
     def _stab_log_data(self, timestamp, data, logconf):
         """Callback froma the log API when data arrives"""
         """print('[%d][%s]: %s' % (timestamp, logconf.name, data))"""
+        try:
+            self.curRoll = data['stabilizer.roll']
+            self.curPitch = data['stabilizer.pitch']
+            self.curYaw  = data['stabilizer.yaw']
+        except Exception as e:
+            print str(e)
 
-        with open('SensorMaster.txt', 'a') as sensorMaster:
-            sensorMaster.write('%d,%.2f,%.2f,%.2f' %(timestamp, data['stabilizer.roll'], data['stabilizer.yaw'], data['stabilizer.pitch']))
-            sensorMaster.write('\n')
+        # with open('SensorMaster.txt', 'a') as sensorMaster:
+        #     sensorMaster.write('%d,%.2f,%.2f,%.2f' %(timestamp, data['stabilizer.roll'], data['stabilizer.yaw'], data['stabilizer.pitch']))
+        #     sensorMaster.write('\n')
 
     def _log_gyro_data(self, timestamp, data, logconf):
         with open('GyroscopeData.txt', 'a') as GyroscopeData:
@@ -146,7 +157,7 @@ class SyncCrazyflie:
 
         try:
             self.cf.log.add_config(self._lg_vbat)
-            
+
             # This callback will receive the data
             self._lg_vbat.data_received_cb.add_callback(self._vbat_log_data)
 

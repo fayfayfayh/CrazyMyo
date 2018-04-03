@@ -378,6 +378,7 @@ class FlightCtrl:
 
         d = 0.3
 
+
         if g_id[0] == DOUBLE_TAP: #RECAL
             self.resetYawInit()
 
@@ -386,13 +387,17 @@ class FlightCtrl:
             print("Roll...")
 
             if (g_id[2] > 0):
-                print("turning left")
+                print("Turning left")
                 inMotion = True
+                print 'x: %f' % (self.lvSpeed * self.lfCoef[0])
+                print 'y: %f'%(self.lvSpeed * self.lfCoef[1])
                 self.mc.move_distance(self.lvSpeed * self.lfCoef[0], self.lvSpeed * self.lfCoef[1], 0)
                 inMotion = False
             else:
-                print("turning right")
+                print("Turning right")
                 inMotion = True
+                print 'x: %f' % (self.lvSpeed * self.rtCoef[0])
+                print 'y: %f'%(self.lvSpeed * self.rtCoef[1])
                 self.mc.move_distance(self.lvSpeed * self.rtCoef[0], self.lvSpeed * self.rtCoef[1], 0)
                 inMotion = False
 
@@ -401,13 +406,17 @@ class FlightCtrl:
             print("Pitch...")
 
             if (g_id[2] < 0):
-                print("moving forward")
+                print("Moving forward")
                 inMotion = True
+                print 'x: %f' % (self.lvSpeed * self.fwCoef[0])
+                print 'y: %f' % (self.lvSpeed * self.fwCoef[1])
                 self.mc.move_distance(self.lvSpeed * self.fwCoef[0], self.lvSpeed * self.fwCoef[1], 0)
                 inMotion = False
             else:
-                print("moving backward")
+                print("Moving backward")
                 inMotion = True
+                print 'x: %f' % (self.lvSpeed * self.bkCoef[0])
+                print 'y: %f' % (self.lvSpeed * self.bkCoef[1])
                 self.mc.move_distance(self.lvSpeed * self.bkCoef[0], self.lvSpeed * self.bkCoef[1], 0)
                 inMotion = False
 
@@ -424,13 +433,13 @@ class FlightCtrl:
                     print("Max. height %.2fm reached: requested height: %.2f") % (self.mc.max_height, self.mc._thread.get_height() + d)
 
             else:
-                if self.mc._thread.get_height() - d < self.mc.min_height:
+                if self.mc._thread.get_height() - d > self.mc.min_height:
                     print("Down...")
                     inMotion = True
                     self.mc.down(d)
                     inMotion = False
                 else:
-                    print("Max. height %.2fm reached: requested height: %.2f") % (self.mc.max_height, self.mc._thread.get_height() + d)
+                    print("Min. height %.2fm reached: requested height: %.2f") % (self.mc.max_height, self.mc._thread.get_height() + d)
 
         elif g_id[0] == FINGERS_SPREAD and g_id[1] == yaw_id:
             print ('Yaw...')
@@ -461,12 +470,6 @@ class FlightCtrl:
                     threadUpdate = Thread(target = self._updateYaw, args = (self.scf,))
                     threadUpdate.start()
 
-        elif g_id[0] == LAND: #deprecated TODO TAKE THIS OUT
-            print("Landing...")
-            inMotion = True
-            self.mc.land()
-            inMotion = False
-
         else: #rest behaviour
             if self.mc._is_flying: # If we're not flying it won't do anything, so can ignore that case
                 inMotion = True
@@ -487,33 +490,37 @@ class FlightCtrl:
 
     def updateYawCurr(self):
         try:
-            with open('SensorMaster.txt','r') as stbFile:
-                stbLines = stbFile.readlines()
-
-            currAttitude = stbLines[len(stbLines)-1]
-            currentYaw = currAttitude.split(',')[2]
-            self.yawCurr = float(currentYaw)
+            # with open('SensorMaster.txt','r') as stbFile:
+            #     stbLines = stbFile.readlines()
+            #
+            # currAttitude = stbLines[len(stbLines)-1]
+            # currentYaw = currAttitude.split(',')[2]
+            print self.scf.curYaw
+            self.yawCurr = float(self.scf.curYaw)
             #update all coefficients after updating the yaw angle
             coef = self.updateCoef()
+            print 'Yaw angle: %f' % (self.yawCurr)
         except Exception, e:
             print str(e)
             print("Update current yaw failed")
 
     def resetYawInit(self):
         try:
+            print '\nResetting yaw angle!!!!\n'
              #set recalibrate initial Yaw value
-            with open('SensorMaster.txt','r') as stbFile:
-                stbLines = stbFile.readlines()
+            # with open('SensorMaster.txt','r') as stbFile:
+            #     stbLines = stbFile.readlines()
+            #
+            # while len(stbLines) == 0:
+            #     with open('SensorMaster.txt','r') as stbFile:
+            #         stbLines = stbFile.readlines()
+            #
+            # newInitAttitude = stbLines[len(stbLines)-1]
+            # initYaw = newInitAttitude.split(',')[2]
+            # print("Yaw angle recalibrated: %2f") % (float(initYaw),)
 
-            while len(stbLines) == 0:
-                with open('SensorMaster.txt','r') as stbFile:
-                    stbLines = stbFile.readlines()
-
-            newInitAttitude = stbLines[len(stbLines)-1]
-            initYaw = newInitAttitude.split(',')[2]
-            print("Yaw angle recalibrated: %2f") % (float(initYaw),)
-
-            self.yawInit = float(initYaw)
+            #self.yawInit = float(initYaw)
+            self.yawInit = self.scf.curYaw
         except Exception, e:
             print str(e)
             print("Reset failed!")
@@ -531,8 +538,10 @@ class FlightCtrl:
 
     def gesture_ctrl(self, fc, g):
         global gesture
+        print 'STarting ctrl thread'
 
         self.resetYawInit()
+        print 'after yaw init'
 
         try:
 
