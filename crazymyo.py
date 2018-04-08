@@ -490,36 +490,18 @@ class FlightCtrl:
 
     def updateYawCurr(self):
         try:
-            # with open('SensorMaster.txt','r') as stbFile:
-            #     stbLines = stbFile.readlines()
-            #
-            # currAttitude = stbLines[len(stbLines)-1]
-            # currentYaw = currAttitude.split(',')[2]
-            print self.scf.curYaw
+            
             self.yawCurr = float(self.scf.curYaw)
             #update all coefficients after updating the yaw angle
             coef = self.updateCoef()
-            print 'Yaw angle: %f' % (self.yawCurr)
+            
         except Exception, e:
             print str(e)
             print("Update current yaw failed")
 
     def resetYawInit(self):
         try:
-            print '\nResetting yaw angle!!!!\n'
-             #set recalibrate initial Yaw value
-            # with open('SensorMaster.txt','r') as stbFile:
-            #     stbLines = stbFile.readlines()
-            #
-            # while len(stbLines) == 0:
-            #     with open('SensorMaster.txt','r') as stbFile:
-            #         stbLines = stbFile.readlines()
-            #
-            # newInitAttitude = stbLines[len(stbLines)-1]
-            # initYaw = newInitAttitude.split(',')[2]
-            # print("Yaw angle recalibrated: %2f") % (float(initYaw),)
-
-            #self.yawInit = float(initYaw)
+            
             self.yawInit = self.scf.curYaw
         except Exception, e:
             print str(e)
@@ -538,11 +520,9 @@ class FlightCtrl:
 
     def gesture_ctrl(self, fc, g):
         global gesture
-        print 'STarting ctrl thread'
 
         self.resetYawInit()
-        print 'after yaw init'
-
+        
         try:
 
             while True:
